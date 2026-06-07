@@ -1,42 +1,48 @@
 "use client"
+
 import {
-  RadarChart as RechartsRadar,
-  PolarGrid,
   PolarAngleAxis,
+  PolarGrid,
   PolarRadiusAxis,
   Radar,
+  RadarChart as RechartsRadarChart,
   ResponsiveContainer,
 } from "recharts"
 import { EvaluationResult } from "../types/index"
 
-interface Props {
+interface RadarChartProps {
   scores: EvaluationResult
 }
 
-export function RadarChart({ scores }: Props) {
+export function RadarChart({ scores }: RadarChartProps) {
   const data = [
-    { metric: "Technical", score: scores.technicalAccuracy },
-    { metric: "Adaptability", score: scores.adaptability },
-    { metric: "Communication", score: scores.communication },
-    { metric: "Efficiency", score: scores.efficiency },
+    { metric: "Technical", value: scores.technicalAccuracy },
+    { metric: "Adaptability", value: scores.adaptability },
+    { metric: "Communication", value: scores.communication },
+    { metric: "Efficiency", value: scores.efficiency },
   ]
 
   return (
-    <ResponsiveContainer width="100%" height={340}>
-      <RechartsRadar data={data} outerRadius="75%">
-        <PolarGrid stroke="#2a2a2a" />
-        <PolarAngleAxis dataKey="metric" tick={{ fill: "#888", fontSize: 12 }} />
-        <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fill: "#555", fontSize: 10 }} tickCount={6} />
-        <Radar
-          name="Score"
-          dataKey="score"
-          stroke="#6366f1"
-          fill="#6366f1"
-          fillOpacity={0.35}
-          animationBegin={0}
-          animationDuration={1200}
-        />
-      </RechartsRadar>
-    </ResponsiveContainer>
+    <div className="h-[360px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsRadarChart data={data}>
+          <PolarGrid stroke="rgba(148,163,184,0.16)" />
+          <PolarAngleAxis dataKey="metric" tick={{ fill: "#cbd5e1", fontSize: 12 }} />
+          <PolarRadiusAxis
+            angle={90}
+            domain={[0, 10]}
+            tick={{ fill: "#6b7280", fontSize: 10 }}
+            axisLine={false}
+          />
+          <Radar
+            name="Scores"
+            dataKey="value"
+            stroke="#7c83ff"
+            fill="#7c83ff"
+            fillOpacity={0.22}
+          />
+        </RechartsRadarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }

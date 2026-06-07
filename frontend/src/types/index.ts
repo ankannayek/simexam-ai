@@ -1,31 +1,5 @@
 export type MessageRole = "student" | "simulator" | "pm" | "system"
 
-export interface ChatMessage {
-  id: string
-  role: MessageRole
-  content: string
-  timestamp: number
-  streaming?: boolean
-  isError?: boolean
-}
-
-export interface TerminalOutput {
-  lines: string[]
-  status: "success" | "warning" | "error" | "idle"
-  timestamp: string
-}
-
-export interface EvaluationResult {
-  technicalAccuracy: number
-  adaptability: number
-  communication: number
-  efficiency: number
-  overallFeedback: string
-  strengths: string[]
-  improvements: string[]
-  passed: boolean
-}
-
 export type IntentClass =
   | "HINT_REQUEST"
   | "CODE_PASTE"
@@ -56,4 +30,45 @@ export interface ExamState {
 export interface GeminiMessage {
   role: "user" | "model"
   parts: Array<{ text: string }>
+}
+
+export interface ChatRequestBody {
+  messages: GeminiMessage[]
+  studentName: string
+  examState: ExamState
+}
+
+export interface EvaluateRequestBody {
+  conversationHistory: string
+  codeSnapshots: string[]
+  timeElapsedSeconds: number
+  curveballFired: boolean
+  curveballAddressed: boolean
+  studentName: string
+}
+
+export interface EvaluationResult {
+  technicalAccuracy: number
+  adaptability: number
+  communication: number
+  efficiency: number
+  overallFeedback: string
+  strengths: string[]
+  improvements: string[]
+  passed: boolean
+}
+
+export interface ChatMessage {
+  id: string
+  role: MessageRole
+  content: string
+  timestamp: number
+  streaming?: boolean
+  isError?: boolean
+}
+
+export interface TerminalOutput {
+  lines: string[]
+  status: "success" | "warning" | "error" | "idle"
+  timestamp: string
 }

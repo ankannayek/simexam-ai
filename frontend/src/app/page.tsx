@@ -1,223 +1,237 @@
 "use client"
+
 import { useState } from "react"
-import { ArrowRight, BrainCircuit, ShieldCheck, Workflow } from "lucide-react"
+import {
+  ArrowRight,
+  Bot,
+  Code2,
+  LayoutPanelLeft,
+  MessageSquareText,
+  TimerReset,
+  Sparkles,
+  ShieldCheck,
+  SquareTerminal,
+} from "lucide-react"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Separator } from "../components/ui/separator"
 import { SESSION_KEYS } from "../lib/constants"
 import { navigateTo } from "../lib/navigation"
 
+function resetSession() {
+  const keys = [
+    SESSION_KEYS.STUDENT_NAME,
+    SESSION_KEYS.EXAM_STATE,
+    SESSION_KEYS.MESSAGES,
+    SESSION_KEYS.CODE,
+    SESSION_KEYS.TIMER,
+    SESSION_KEYS.RESULTS,
+    SESSION_KEYS.EVALUATION_PAYLOAD,
+    SESSION_KEYS.EVALUATION_PENDING,
+  ]
+
+  for (const key of keys) {
+    sessionStorage.removeItem(key)
+  }
+}
+
 export default function LandingPage() {
   const [name, setName] = useState("")
+
   function begin() {
     const clean = name.trim() || "Candidate"
     sessionStorage.setItem(SESSION_KEYS.STUDENT_NAME, clean)
-    sessionStorage.removeItem(SESSION_KEYS.RESULTS)
-    sessionStorage.removeItem(SESSION_KEYS.EVALUATION_PAYLOAD)
-    sessionStorage.removeItem(SESSION_KEYS.EVALUATION_PENDING)
+    resetSession()
+    sessionStorage.setItem(SESSION_KEYS.STUDENT_NAME, clean)
     navigateTo("/exam")
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#0f0f0f",
-      padding: "24px",
-    }}>
-      <section style={{ width: "100%", maxWidth: "920px", animation: "fadeInUp 0.6s ease-out" }}>
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            border: "1px solid #3730a3",
-            background: "rgba(99,102,241,0.08)",
-            color: "#c7d2fe",
-            borderRadius: "4px",
-            padding: "5px 10px",
-            fontSize: "11px",
-            letterSpacing: "0.06em",
-            fontWeight: 600,
-            marginBottom: "16px",
-          }}>
-            FAR AWAY 2026 · EXAMINATIONS × AGENTIC SYSTEMS
-          </div>
-          <h1 style={{
-            fontSize: "clamp(42px, 7vw, 72px)",
-            lineHeight: 0.95,
-            margin: "0 0 16px",
-            letterSpacing: "-0.06em",
-          }}>
-            SimExam<span style={{ color: "#818cf8" }}>.ai</span>
-          </h1>
-          <p style={{ color: "#a1a1aa", fontSize: "17px", maxWidth: "640px", margin: "0 auto", lineHeight: 1.6 }}>
-            A live, AI-refereed coding assessment where candidates debug, reason, adapt to a PM curveball, and get structured evaluation.
-          </p>
-        </div>
+    <main className="relative min-h-screen overflow-hidden text-zinc-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,131,255,0.18),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(34,197,94,0.07),transparent_20%),radial-gradient(circle_at_bottom,rgba(15,23,42,0.5),transparent_35%)]" />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <header className="flex items-center justify-between gap-4">
+          <Badge variant="outline" className="border-white/12 bg-white/[0.03] text-zinc-300">
+            AI-DRIVEN PRACTICAL ASSESSMENTS
+          </Badge>
+          <span className="hidden text-xs text-zinc-500 sm:block">
+            Clean interface • live demo ready • structured scoring
+          </span>
+        </header>
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1.08fr 0.92fr",
-          gap: "16px",
-          alignItems: "stretch",
-        }}>
-          {/* Left card — begin assessment */}
-          <div style={{
-            border: "1px solid #27272a",
-            background: "#111111",
-            borderRadius: "8px",
-            padding: "24px",
-          }}>
-            <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 700, letterSpacing: "-0.03em" }}>
-              Begin practical assessment
-            </h2>
-            <p style={{ color: "#71717a", fontSize: "13px", lineHeight: 1.6, marginTop: "8px" }}>
-              You will get a broken JavaScript sorting module, a senior-dev mentor chat, a mock terminal, and a timed production constraint update.
-            </p>
+        <section className="flex flex-1 items-center py-10 lg:py-14">
+          <div className="grid w-full gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+            <div className="space-y-8">
+              <div className="max-w-2xl space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-indigo-200">
+                  <Sparkles size={13} />
+                  LIVE CANDIDATE SIMULATION
+                </div>
 
-            <label style={{ display: "block", color: "#a1a1aa", fontSize: "12px", fontWeight: 500, letterSpacing: "0.04em", margin: "20px 0 7px" }}>
-              STUDENT NAME
-            </label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") begin() }}
-              placeholder="Your name"
-              autoFocus
-              style={{
-                width: "100%",
-                background: "#0f0f0f",
-                border: "1px solid #3f3f46",
-                color: "#f4f4f5",
-                borderRadius: "6px",
-                padding: "12px 14px",
-                outline: "none",
-                fontSize: "14px",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={e => { e.target.style.borderColor = "#6366f1" }}
-              onBlur={e => { e.target.style.borderColor = "#3f3f46" }}
-            />
-            <button
-              onClick={begin}
-              style={{
-                width: "100%",
-                marginTop: "14px",
-                background: "#6366f1",
-                border: "none",
-                borderRadius: "6px",
-                color: "white",
-                padding: "13px 16px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#5254cc" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#6366f1" }}
-            >
-              Begin Assessment <ArrowRight size={16} />
-            </button>
+                <div className="space-y-4">
+                  <h1 className="max-w-xl text-5xl font-semibold tracking-[-0.06em] text-zinc-50 sm:text-6xl lg:text-7xl">
+                    SimExam.ai
+                  </h1>
+                  <p className="max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
+                    A focused assessment environment that tests debugging, reasoning, and adaptation under changing
+                    constraints. One task. One interviewer. One structured evaluation.
+                  </p>
+                </div>
+              </div>
 
-            <div style={{ marginTop: "16px", color: "#52525b", fontSize: "11px", fontFamily: "monospace" }}>
-              Shift+D fires curveball · <code style={{ color: "#71717a" }}>`</code> shows agent state · Ctrl+Enter runs code
+              <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
+                <CardHeader>
+                  <CardTitle className="text-xl sm:text-2xl">Begin assessment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <p className="max-w-xl text-sm leading-6 text-zinc-400">
+                    You will enter a coding session with a broken module, a live mentor, a terminal, and a timed
+                    constraint shift. The interface stays calm; the problem gets harder.
+                  </p>
+
+                  <form
+                    className="space-y-3"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      begin()
+                    }}
+                  >
+                    <label className="block text-[11px] font-medium tracking-[0.16em] text-zinc-500">
+                      STUDENT NAME
+                    </label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      autoFocus
+                      className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/20"
+                    />
+
+                    <Button type="submit" className="h-12 w-full rounded-2xl text-sm">
+                      Begin assessment <ArrowRight size={16} />
+                    </Button>
+                  </form>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+                      Press Enter to start
+                    </span>
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+                      Session resets cleanly
+                    </span>
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+                      No clutter on this screen
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  {
+                    icon: Code2,
+                    title: "Code editor",
+                    desc: "Broken code to inspect, fix, and improve.",
+                  },
+                  {
+                    icon: MessageSquareText,
+                    title: "AI interviewer",
+                    desc: "A guided conversation that reacts to your answers.",
+                  },
+                  {
+                    icon: SquareTerminal,
+                    title: "Terminal output",
+                    desc: "Immediate feedback from running the code.",
+                  },
+                ].map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <Card key={item.title} className="border-white/8 bg-white/[0.025]">
+                      <CardContent className="space-y-3 p-5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-indigo-200">
+                          <Icon size={18} />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm font-semibold text-zinc-100">{item.title}</h3>
+                          <p className="text-sm leading-6 text-zinc-500">{item.desc}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Card className="border-white/10 bg-white/[0.035]">
+                <CardHeader className="space-y-3">
+                  <Badge variant="outline" className="w-fit border-white/10 bg-white/[0.03]">
+                    WHAT THE CANDIDATE SEES
+                  </Badge>
+                  <CardTitle className="text-xl sm:text-2xl">A professional coding-session flow</CardTitle>
+                  <p className="max-w-xl text-sm leading-6 text-zinc-400">
+                    The UI should feel like a serious assessment tool, not a toy dashboard. The hierarchy stays clean
+                    and the story stays readable.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    {
+                      icon: LayoutPanelLeft,
+                      title: "Clear workspace",
+                      desc: "Code on one side, conversation on the other, terminal below.",
+                    },
+                    {
+                      icon: Bot,
+                      title: "Real conversation",
+                      desc: "The mentor responds to help requests and code changes.",
+                    },
+                    {
+                      icon: TimerReset,
+                      title: "Timed pressure",
+                      desc: "A clean constraint shift appears mid-session without visual noise.",
+                    },
+                    {
+                      icon: ShieldCheck,
+                      title: "Structured evaluation",
+                      desc: "A concise report summarizes technical accuracy and adaptability.",
+                    },
+                  ].map((item, index) => {
+                    const Icon = item.icon
+                    return (
+                      <div key={item.title}>
+                        <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-zinc-950/55 px-4 py-4">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-indigo-200">
+                            <Icon size={16} />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-zinc-100">{item.title}</p>
+                            <p className="text-sm leading-6 text-zinc-500">{item.desc}</p>
+                          </div>
+                        </div>
+                        {index < 3 && <Separator className="my-3 bg-white/8" />}
+                      </div>
+                    )
+                  })}
+                </CardContent>
+              </Card>
+
+              <Card className="border-indigo-500/15 bg-gradient-to-br from-indigo-500/8 via-white/[0.03] to-transparent">
+                <CardContent className="space-y-3 p-5">
+                  <div className="text-[11px] font-medium tracking-[0.16em] text-zinc-500">
+                    PRODUCT PRINCIPLE
+                  </div>
+                  <p className="text-sm leading-7 text-zinc-300">
+                    Public UI stays minimal and serious. Internal AI routing, evaluation details, and debug state live
+                    behind the scenes.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
-
-          {/* Right card — architecture */}
-          <div style={{
-            border: "1px solid #27272a",
-            background: "#0a0a0a",
-            borderRadius: "8px",
-            padding: "20px",
-          }}>
-            <h3 style={{
-              margin: "0 0 4px",
-              color: "#a1a1aa",
-              fontSize: "11px",
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-            }}>
-              ARCHITECTURE
-            </h3>
-            <p style={{ margin: "0 0 14px", color: "#71717a", fontSize: "12px" }}>
-              Three agents, bounded state machine
-            </p>
-            {[
-              [BrainCircuit, "Simulator", "Gemini streaming mentor. Intent classifier routes ~85% of turns to pre-authored CAG responses — only NOVEL_INPUT fires a live call."],
-              [Workflow, "PM Curveball", "Autonomous timed event at 120s. Injects O(n log n) constraint. Zero LLM variance — fires from timer state, not model output."],
-              [ShieldCheck, "Evaluator", "Single structured Gemini JSON call. Scores 4 dimensions. Rule-based fallback runs immediately if model rate-limits."],
-            ].map(([Icon, title, copy]) => {
-              const C = Icon as typeof BrainCircuit
-              return (
-                <div key={String(title)} style={{
-                  display: "flex",
-                  gap: "10px",
-                  padding: "12px 0",
-                  borderTop: "1px solid #1f1f1f",
-                }}>
-                  <div style={{
-                    width: "30px",
-                    height: "30px",
-                    borderRadius: "6px",
-                    background: "#111",
-                    border: "1px solid #27272a",
-                    color: "#6366f1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}><C size={15} /></div>
-                  <div>
-                    <div style={{ color: "#e4e4e7", fontSize: "13px", fontWeight: 600 }}>{title as string}</div>
-                    <div style={{ color: "#71717a", fontSize: "11px", lineHeight: 1.5, marginTop: "2px" }}>{copy as string}</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Bottom strip — CAG key explainer */}
-        <div style={{
-          marginTop: "16px",
-          border: "1px solid #1f1f1f",
-          background: "#0a0a0a",
-          borderRadius: "6px",
-          padding: "12px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          flexWrap: "wrap",
-        }}>
-          <span style={{ color: "#52525b", fontSize: "11px", fontFamily: "monospace", flexShrink: 0 }}>
-            Production CAG key:
-          </span>
-          {[
-            ["HINT_REQUEST:BUGGY_ORIGINAL:false", "#3730a3", "#c7d2fe"],
-            ["CODE_PASTE:FIXED_FAST:true", "#14532d", "#86efac"],
-            ["NOVEL_INPUT:*:*", "#451a03", "#fcd34d"],
-          ].map(([key, bg, fg]) => (
-            <code key={key} style={{
-              background: bg,
-              color: fg,
-              fontSize: "10px",
-              padding: "2px 7px",
-              borderRadius: "3px",
-              fontFamily: "monospace",
-            }}>
-              {key}
-            </code>
-          ))}
-          <span style={{ color: "#52525b", fontSize: "11px", marginLeft: "auto" }}>
-            ~85% served from KV store · ~15% → live Gemini
-          </span>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   )
 }

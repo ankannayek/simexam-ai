@@ -2,20 +2,14 @@
 
 export function TypingIndicator() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 0" }}>
-      <span style={{ fontSize: "11px", color: "#888" }}>Alex is typing</span>
-      <span style={{ display: "flex", gap: "3px" }}>
-        {[0, 1, 2].map(i => (
+    <div className="flex items-center gap-3 px-1 py-1 text-xs text-zinc-500">
+      <span>Alex is typing</span>
+      <span className="flex items-center gap-1.5">
+        {[0, 1, 2].map((index) => (
           <span
-            key={i}
-            style={{
-              width: "5px",
-              height: "5px",
-              borderRadius: "50%",
-              background: "#6366f1",
-              display: "inline-block",
-              animation: `typingBounce 1.2s ${i * 0.2}s ease-in-out infinite`,
-            }}
+            key={index}
+            className="h-1.5 w-1.5 rounded-full bg-indigo-400"
+            style={{ animation: `typingBounce 1.15s ${index * 0.16}s ease-in-out infinite` }}
           />
         ))}
       </span>

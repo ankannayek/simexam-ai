@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react"
-import { ExamState, IntentClass } from "../types/index"
-import { classifyIntent, deriveApproach, deriveCodeState } from "../lib/codeAnalysis"
+import { useCallback, useEffect, useState } from "react"
+import { SESSION_KEYS } from "../lib/constants"
+import { deriveApproach, deriveCodeState } from "../lib/codeAnalysis"
+import { CodeState, ExamState, IntentClass } from "../types/index"
 
 const INITIAL_STATE: ExamState = {
   bugFixed: false,
@@ -13,45 +14,95 @@ const INITIAL_STATE: ExamState = {
   lastIntentClass: "NOVEL_INPUT",
 }
 
+function loadState(): ExamState {
+  if (typeof window === "undefined") return INITIAL_STATE
+
+  const raw = sessionStorage.getItem(SESSION_KEYS.EXAM_STATE)
+  if (!raw) return INITIAL_STATE
+
+  try {
+    const parsed = JSON.parse(raw) as ExamState
+    return {
+      ...INITIAL_STATE,
+      ...parsed,
+    }
+  } catch {
+    return INITIAL_STATE
+  }
+}
+
 export function useExamState() {
-  const [examState, setExamState] = useState<ExamState>(INITIAL_STATE)
+  const [examState, setExamState] = useState<ExamState>(loadState)
+
+  useEffect(() => {
+    sessionStorage.setItem(SESSION_KEYS.EXAM_STATE, JSON.stringify(examState))
+  }, [examState])
 
   const updateFromCode = useCallback((code: string, curveballSeen: boolean) => {
     const codeState = deriveCodeState(code)
-    setExamState(prev => ({
+    const approach = deriveApproach(codeState)
+
+    setExamState((prev) => {
+      const seen = prev.curveballSeen || curveballSeen
+      const fixedFast = codeState === "FIXED_FAST"
+
+      return {
+        ...prev,
+        bugFixed: codeState === "FIXED_SLOW" || codeState === "FIXED_FAST",
+        approach,
+        curveballSeen: seen,
+        curveballAddressed: prev.curveballAddressed || (fixedFast && seen),
+        lastCodeState: codeState,
+      }
+    })
+  }, [])
+
+  const registerInteraction = useCallback((intent: IntentClass) => {
+    setExamState((prev) => ({
       ...prev,
-      lastCodeState: codeState,
-      bugFixed: codeState === "FIXED_SLOW" || codeState === "FIXED_FAST",
-      approach: deriveApproach(code, codeState),
-      curveballSeen: prev.curveballSeen || curveballSeen,
-      curveballAddressed: codeState === "FIXED_FAST" && (prev.curveballSeen || curveballSeen),
+      turnsElapsed: prev.turnsElapsed + 1,
+      hintsGiven:
+        prev.hintsGiven +
+        (intent === "HINT_REQUEST" || intent === "CONCEPT_QUESTION" ? 1 : 0),
+      lastIntentClass: intent,
     }))
   }, [])
 
-  const incrementTurns = useCallback(() => {
-    setExamState(prev => ({ ...prev, turnsElapsed: prev.turnsElapsed + 1 }))
-  }, [])
-
-  const incrementHints = useCallback(() => {
-    setExamState(prev => ({ ...prev, hintsGiven: prev.hintsGiven + 1 }))
-  }, [])
-
   const markCurveballSeen = useCallback(() => {
-    setExamState(prev => ({ ...prev, curveballSeen: true }))
+    setExamState((prev) => ({
+      ...prev,
+      curveballSeen: true,
+    }))
   }, [])
 
-  const recordIntent = useCallback((message: string): IntentClass => {
-    const intent = classifyIntent(message)
-    setExamState(prev => ({ ...prev, lastIntentClass: intent }))
-    return intent
+  const markCurveballAddressed = useCallback(() => {
+    setExamState((prev) => ({
+      ...prev,
+      curveballAddressed: true,
+    }))
+  }, [])
+
+  const setLastCodeState = useCallback((codeState: CodeState) => {
+    setExamState((prev) => ({
+      ...prev,
+      lastCodeState: codeState,
+    }))
+  }, [])
+
+  const setLastIntentClass = useCallback((intent: IntentClass) => {
+    setExamState((prev) => ({
+      ...prev,
+      lastIntentClass: intent,
+    }))
   }, [])
 
   return {
     examState,
     updateFromCode,
-    incrementTurns,
-    incrementHints,
+    registerInteraction,
     markCurveballSeen,
-    recordIntent,
+    markCurveballAddressed,
+    setLastCodeState,
+    setLastIntentClass,
   }
 }

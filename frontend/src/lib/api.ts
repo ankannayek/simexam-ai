@@ -1,5 +1,5 @@
-import { GeminiMessage, EvaluationResult, ExamState } from "../types/index"
 import { BACKEND_URL } from "./constants"
+import { EvaluationResult, ExamState, GeminiMessage } from "../types/index"
 
 export async function streamChat(
   messages: GeminiMessage[],
@@ -7,29 +7,35 @@ export async function streamChat(
   examState: ExamState,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void
-): Promise<void> {
+  onError: (message: string) => void
+) {
   let response: Response
 
   try {
     response = await fetch(`${BACKEND_URL}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, studentName, examState }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages,
+        studentName,
+        examState,
+      }),
     })
   } catch {
-    onError("Cannot reach backend. Is the server running on port 3001?")
+    onError("Cannot reach the backend. Make sure it is running on port 3001.")
     return
   }
 
   if (!response.ok) {
-    onError(`Backend error: ${response.status}`)
+    onError(`Chat request failed with status ${response.status}`)
     return
   }
 
   const reader = response.body?.getReader()
   if (!reader) {
-    onError("No response stream")
+    onError("No response stream received.")
     return
   }
 
@@ -41,25 +47,28 @@ export async function streamChat(
     if (done) break
 
     buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n\n")
-    buffer = lines.pop() ?? ""
+    const parts = buffer.split("\n\n")
+    buffer = parts.pop() ?? ""
 
-    for (const line of lines) {
+    for (const part of parts) {
+      const line = part.trim()
       if (!line.startsWith("data: ")) continue
-      const data = line.slice(6).trim()
-      if (data === "[DONE]") {
+
+      const payload = line.slice(6).trim()
+      if (payload === "[DONE]") {
         onDone()
         return
       }
+
       try {
-        const parsed = JSON.parse(data) as { text?: string; error?: string }
+        const parsed = JSON.parse(payload)
         if (parsed.text) onChunk(parsed.text)
         if (parsed.error) {
           onError(parsed.error)
           return
         }
       } catch {
-        // Skip partial JSON chunks.
+        // Ignore partial or malformed chunks.
       }
     }
   }
@@ -77,12 +86,14 @@ export async function evaluateSession(payload: {
 }): Promise<EvaluationResult> {
   const response = await fetch(`${BACKEND_URL}/api/evaluate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   })
 
   if (!response.ok) {
-    throw new Error(`Evaluate failed: ${response.status}`)
+    throw new Error(`Evaluation failed with status ${response.status}`)
   }
 
   return response.json()

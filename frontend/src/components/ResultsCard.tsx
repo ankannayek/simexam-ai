@@ -1,32 +1,59 @@
 "use client"
 
-interface Props {
+import { ArrowRight, CheckCircle2, Lightbulb } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+
+interface ResultsCardProps {
   strengths: string[]
   improvements: string[]
 }
 
-export function ResultsCard({ strengths, improvements }: Props) {
+export function ResultsCard({ strengths, improvements }: ResultsCardProps) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
-      <div style={{ background: "#0d1f16", border: "1px solid #14532d", borderRadius: "8px", padding: "16px" }}>
-        <h3 style={{ color: "#22c55e", fontSize: "13px", fontWeight: "600", marginBottom: "12px" }}>Strengths</h3>
-        {strengths.map((s, i) => (
-          <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "8px", color: "#e4e4e4", fontSize: "13px", lineHeight: "1.5" }}>
-            <span style={{ color: "#22c55e", marginTop: "2px" }}>✓</span>
-            <span>{s}</span>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card className="border-emerald-500/15 bg-emerald-500/[0.04]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-200">
+              <CheckCircle2 size={18} />
+            </div>
+            <CardTitle className="text-xl">Strengths</CardTitle>
           </div>
-        ))}
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {strengths.map((item) => (
+            <div
+              key={item}
+              className="flex gap-3 rounded-2xl border border-emerald-500/15 bg-zinc-950/35 px-4 py-3"
+            >
+              <span className="mt-0.5 text-emerald-300">✓</span>
+              <p className="text-sm leading-6 text-zinc-200">{item}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
-      <div style={{ background: "#1c1208", border: "1px solid #92400e", borderRadius: "8px", padding: "16px" }}>
-        <h3 style={{ color: "#f59e0b", fontSize: "13px", fontWeight: "600", marginBottom: "12px" }}>Areas for Growth</h3>
-        {improvements.map((s, i) => (
-          <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "8px", color: "#e4e4e4", fontSize: "13px", lineHeight: "1.5" }}>
-            <span style={{ color: "#f59e0b", marginTop: "2px" }}>→</span>
-            <span>{s}</span>
+      <Card className="border-amber-500/15 bg-amber-500/[0.04]">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-200">
+              <Lightbulb size={18} />
+            </div>
+            <CardTitle className="text-xl">Areas for growth</CardTitle>
           </div>
-        ))}
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {improvements.map((item) => (
+            <div
+              key={item}
+              className="flex gap-3 rounded-2xl border border-amber-500/15 bg-zinc-950/35 px-4 py-3"
+            >
+              <ArrowRight size={14} className="mt-1 shrink-0 text-amber-300" />
+              <p className="text-sm leading-6 text-zinc-200">{item}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

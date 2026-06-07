@@ -1,48 +1,19 @@
 "use client"
-import { AlertTriangle } from "lucide-react"
-import { useEffect, useRef } from "react"
 
-interface Props {
+import { AlertTriangle } from "lucide-react"
+
+interface CurveballBannerProps {
   message: string
-  timestamp: number
 }
 
-export function CurveballBanner({ message }: Props) {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    ref.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-  }, [])
-
+export function CurveballBanner({ message }: CurveballBannerProps) {
   return (
-    <div
-      ref={ref}
-      style={{
-        borderLeft: "4px solid #f97316",
-        background: "#1c1208",
-        borderRadius: "0 6px 6px 0",
-        padding: "12px 14px",
-        margin: "8px 0",
-        animation: "curveballPulse 0.8s ease-out",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-        <AlertTriangle size={14} color="#f97316" />
-        <span style={{ color: "#f97316", fontWeight: "600", fontSize: "12px" }}>Alex (PM)</span>
-        <span style={{
-          background: "#f97316",
-          color: "#fff",
-          fontSize: "10px",
-          padding: "1px 6px",
-          borderRadius: "4px",
-          fontWeight: "600",
-        }}>
-          CONSTRAINT UPDATE
-        </span>
+    <div className="animate-[curveballPulse_0.35s_ease-out] rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.2)]">
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-[0.16em] text-amber-200">
+        <AlertTriangle size={13} />
+        CONSTRAINT UPDATE
       </div>
-      <p style={{ color: "#e4e4e4", fontSize: "13px", lineHeight: "1.5", margin: 0 }}>
-        {message}
-      </p>
+      <p className="text-sm leading-6 text-zinc-200">{message}</p>
     </div>
   )
 }

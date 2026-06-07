@@ -1,49 +1,75 @@
 "use client"
+
 import { ExamState } from "../types/index"
 
-interface Props {
+interface ExamStateDebugPanelProps {
   examState: ExamState
   visible: boolean
 }
 
-export function ExamStateDebugPanel({ examState, visible }: Props) {
+export function ExamStateDebugPanel({ examState, visible }: ExamStateDebugPanelProps) {
   if (!visible) return null
 
-  const stateColor = (val: boolean) => val ? "#22c55e" : "#ef4444"
+  const pill = "rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.1em]"
 
   return (
-    <div style={{
-      position: "fixed",
-      bottom: "16px",
-      left: "16px",
-      background: "#0a0a0a",
-      border: "1px solid #6366f1",
-      borderRadius: "8px",
-      padding: "12px 16px",
-      fontFamily: "monospace",
-      fontSize: "11px",
-      color: "#e4e4e4",
-      zIndex: 9999,
-      minWidth: "260px",
-      lineHeight: "1.6",
-      boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
-    }}>
-      <div style={{ color: "#6366f1", fontWeight: "bold", marginBottom: "6px" }}>
-        ◆ CAG State Struct (live)
+    <div className="fixed bottom-4 left-4 z-50 w-[300px] rounded-3xl border border-indigo-500/20 bg-zinc-950/95 p-4 text-xs text-zinc-200 shadow-[0_24px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-[11px] font-semibold tracking-[0.18em] text-indigo-200">
+          DEBUG STATE
+        </div>
+        <div className="text-[10px] text-zinc-500">press ` to hide</div>
       </div>
-      <div>bugFixed: <span style={{ color: stateColor(examState.bugFixed) }}>{String(examState.bugFixed)}</span></div>
-      <div>approach: <span style={{ color: "#f59e0b" }}>{examState.approach}</span></div>
-      <div>intentClass: <span style={{ color: "#a78bfa" }}>{examState.lastIntentClass}</span></div>
-      <div>codeState: <span style={{ color: "#f59e0b" }}>{examState.lastCodeState}</span></div>
-      <div>curveballSeen: <span style={{ color: stateColor(examState.curveballSeen) }}>{String(examState.curveballSeen)}</span></div>
-      <div>curveballAddressed: <span style={{ color: stateColor(examState.curveballAddressed) }}>{String(examState.curveballAddressed)}</span></div>
-      <div>hintsGiven: <span style={{ color: "#93c5fd" }}>{examState.hintsGiven}</span></div>
-      <div>turnsElapsed: <span style={{ color: "#93c5fd" }}>{examState.turnsElapsed}</span></div>
-      <div style={{ marginTop: "6px", color: "#888", fontSize: "10px" }}>
-        CAG key: {examState.lastIntentClass}:{examState.lastCodeState}:{String(examState.curveballSeen)}
-      </div>
-      <div style={{ color: "#888", fontSize: "10px" }}>
-        Press ` to hide · Shift+D to fire curveball
+
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Bug fixed</span>
+          <span className={`${pill} border-emerald-500/20 bg-emerald-500/10 text-emerald-200`}>
+            {String(examState.bugFixed)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Approach</span>
+          <span className={`${pill} border-white/10 bg-white/[0.04] text-zinc-200`}>
+            {examState.approach}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Last code state</span>
+          <span className={`${pill} border-white/10 bg-white/[0.04] text-zinc-200`}>
+            {examState.lastCodeState}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Curveball seen</span>
+          <span className={`${pill} border-amber-500/20 bg-amber-500/10 text-amber-200`}>
+            {String(examState.curveballSeen)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Curveball addressed</span>
+          <span className={`${pill} border-amber-500/20 bg-amber-500/10 text-amber-200`}>
+            {String(examState.curveballAddressed)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Hints given</span>
+          <span className={`${pill} border-indigo-500/20 bg-indigo-500/10 text-indigo-200`}>
+            {examState.hintsGiven}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Turns elapsed</span>
+          <span className={`${pill} border-indigo-500/20 bg-indigo-500/10 text-indigo-200`}>
+            {examState.turnsElapsed}
+          </span>
+        </div>
       </div>
     </div>
   )

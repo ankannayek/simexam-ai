@@ -1,44 +1,82 @@
 "use client"
-import { useState, useCallback, useRef, useEffect } from "react"
-import { ChatMessage, GeminiMessage, ExamState } from "../types/index"
+
+import { useCallback, useEffect, useRef, useState } from "react"
+import { ChatMessage, ExamState, GeminiMessage } from "../types/index"
+import { CURVEBALL_MESSAGE, SESSION_KEYS, SIMULATOR_OPENING_MESSAGE } from "../lib/constants"
 import { streamChat } from "../lib/api"
 import { generateId } from "../lib/utils"
-import { CURVEBALL_MESSAGE, SIMULATOR_OPENING_MESSAGE } from "../lib/constants"
+
+function openingMessage(name: string): ChatMessage {
+  return {
+    id: generateId(),
+    role: "simulator",
+    content: SIMULATOR_OPENING_MESSAGE(name),
+    timestamp: Date.now(),
+  }
+}
+
+function loadMessages(studentName: string): ChatMessage[] {
+  if (typeof window === "undefined") return [openingMessage(studentName)]
+
+  const raw = sessionStorage.getItem(SESSION_KEYS.MESSAGES)
+  if (!raw) return [openingMessage(studentName)]
+
+  try {
+    const parsed = JSON.parse(raw) as ChatMessage[]
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed
+  } catch {
+    // ignore invalid storage
+  }
+
+  return [openingMessage(studentName)]
+}
+
+function toGeminiHistory(messages: ChatMessage[]): GeminiMessage[] {
+  return messages
+    .filter((message) => message.role === "student" || message.role === "simulator" || message.role === "pm")
+    .map((message) => ({
+      role: message.role === "simulator" ? "model" : "user",
+      parts: [
+        {
+          text: message.role === "pm" ? `[PM_ALEX] ${message.content}` : message.content,
+        },
+      ],
+    }))
+}
 
 export function useChat(studentName: string) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: generateId(),
-      role: "simulator",
-      content: SIMULATOR_OPENING_MESSAGE(studentName || "Candidate"),
-      timestamp: Date.now(),
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(studentName))
   const [isTyping, setIsTyping] = useState(false)
   const [curveballFired, setCurveballFired] = useState(false)
-  const curveballRef = useRef(false)
+
   const codeSnapshotsRef = useRef<string[]>([])
-  const studentNameRef = useRef(studentName || "Candidate")
+  const messagesRef = useRef(messages)
 
   useEffect(() => {
-    if (!studentName || studentNameRef.current === studentName) return
-    studentNameRef.current = studentName
-    setMessages(prev => {
-      const [first, ...rest] = prev
-      if (!first || first.role !== "simulator") return prev
-      return [{ ...first, content: SIMULATOR_OPENING_MESSAGE(studentName) }, ...rest]
-    })
-  }, [studentName])
+    messagesRef.current = messages
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(SESSION_KEYS.MESSAGES, JSON.stringify(messages))
+    }
+  }, [messages])
 
-  const addCodeSnapshot = useCallback((code: string) => {
-    if (!codeSnapshotsRef.current.includes(code)) {
-      codeSnapshotsRef.current.push(code)
+  useEffect(() => {
+    if (messages.some((message) => message.role === "pm")) {
+      setCurveballFired(true)
     }
   }, [])
 
+  const recordCodeSnapshot = useCallback((code: string) => {
+    const snapshot = code.trim()
+    if (!snapshot) return
+
+    const lastSnapshot = codeSnapshotsRef.current[codeSnapshotsRef.current.length - 1]
+    if (lastSnapshot?.trim() === snapshot) return
+
+    codeSnapshotsRef.current = [...codeSnapshotsRef.current, code]
+  }, [])
+
   const injectCurveball = useCallback(() => {
-    if (curveballRef.current) return
-    curveballRef.current = true
+    if (curveballFired) return
     setCurveballFired(true)
 
     const curveballMsg: ChatMessage = {
@@ -47,88 +85,97 @@ export function useChat(studentName: string) {
       content: CURVEBALL_MESSAGE,
       timestamp: Date.now(),
     }
-    setMessages(prev => [...prev, curveballMsg])
-  }, [])
 
-  const sendMessage = useCallback(async (
-    userText: string,
-    examState: ExamState,
-    currentCode: string
-  ) => {
-    if (!userText.trim() || isTyping) return
+    setMessages((prev) => [...prev, curveballMsg])
+  }, [curveballFired])
 
-    const userMsg: ChatMessage = {
-      id: generateId(),
-      role: "student",
-      content: userText,
-      timestamp: Date.now(),
-    }
+  const sendMessage = useCallback(
+    async (userText: string, examState: ExamState, currentCode: string) => {
+      const trimmed = userText.trim()
+      if (!trimmed || isTyping) return
 
-    const assistantId = generateId()
-    const assistantMsg: ChatMessage = {
-      id: assistantId,
-      role: "simulator",
-      content: "",
-      timestamp: Date.now(),
-      streaming: true,
-    }
+      recordCodeSnapshot(currentCode)
 
-    setMessages(prev => [...prev, userMsg, assistantMsg])
-    setIsTyping(true)
-    addCodeSnapshot(currentCode)
-
-    const allMessages = [...messages, userMsg]
-    const geminiHistory: GeminiMessage[] = allMessages
-      .filter(m => m.role === "student" || m.role === "simulator" || m.role === "pm")
-      .map(m => ({
-        role: (m.role === "student" || m.role === "pm") ? "user" as const : "model" as const,
-        parts: [{ text: m.role === "pm" ? `[PM_ALEX] ${m.content}` : m.content }],
-      }))
-
-    await streamChat(
-      geminiHistory,
-      studentNameRef.current,
-      examState,
-      (text) => {
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === assistantId
-              ? { ...m, content: m.content + text, streaming: true }
-              : m
-          )
-        )
-      },
-      () => {
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, streaming: false } : m))
-        setIsTyping(false)
-      },
-      (err) => {
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === assistantId
-              ? { ...m, content: err, streaming: false, isError: true }
-              : m
-          )
-        )
-        setIsTyping(false)
+      const userMessage: ChatMessage = {
+        id: generateId(),
+        role: "student",
+        content: trimmed,
+        timestamp: Date.now(),
       }
-    )
-  }, [messages, isTyping, addCodeSnapshot])
 
-  const getCodeSnapshots = useCallback(() => [...codeSnapshotsRef.current], [])
+      const assistantId = generateId()
+      const assistantMessage: ChatMessage = {
+        id: assistantId,
+        role: "simulator",
+        content: "",
+        timestamp: Date.now(),
+        streaming: true,
+      }
 
-  const buildTranscript = useCallback((): string => {
-    return messages
-      .map(m => {
+      setMessages((prev) => [...prev, userMessage, assistantMessage])
+      setIsTyping(true)
+
+      const geminiHistory = toGeminiHistory([...messagesRef.current, userMessage])
+
+      await streamChat(
+        geminiHistory,
+        studentName,
+        examState,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId
+                ? {
+                    ...message,
+                    content: message.content + chunk,
+                    streaming: true,
+                  }
+                : message
+            )
+          )
+        },
+        () => {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId ? { ...message, streaming: false } : message
+            )
+          )
+          setIsTyping(false)
+        },
+        (errorMessage) => {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId
+                ? {
+                    ...message,
+                    content: errorMessage,
+                    streaming: false,
+                    isError: true,
+                  }
+                : message
+            )
+          )
+          setIsTyping(false)
+        }
+      )
+    },
+    [isTyping, recordCodeSnapshot, studentName]
+  )
+
+  const buildTranscript = useCallback(() => {
+    return messagesRef.current
+      .map((message) => {
         const label =
-          m.role === "student" ? `Student (${studentNameRef.current})`
-          : m.role === "simulator" ? "Senior Dev (Alex Chen)"
-          : m.role === "pm" ? "PM (Alex)"
-          : "System"
-        return `${label}: ${m.content}`
+          message.role === "student"
+            ? `Student (${studentName})`
+            : message.role === "simulator"
+              ? "Senior Dev (Alex Chen)"
+              : "PM (Alex)"
+
+        return `${label}: ${message.content}`
       })
       .join("\n\n")
-  }, [messages])
+  }, [studentName])
 
   return {
     messages,
@@ -137,8 +184,7 @@ export function useChat(studentName: string) {
     injectCurveball,
     sendMessage,
     buildTranscript,
-    addCodeSnapshot,
-    getCodeSnapshots,
-    codeSnapshotsRef,
+    recordCodeSnapshot,
+    codeSnapshots: codeSnapshotsRef.current,
   }
 }

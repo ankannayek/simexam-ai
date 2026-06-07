@@ -1,215 +1,241 @@
 "use client"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Loader2 } from "lucide-react"
+
+import { useEffect, useMemo, useState } from "react"
+import { ArrowLeft, RotateCcw, ShieldCheck } from "lucide-react"
 import { ChatPanel } from "../../components/ChatPanel"
 import { CodeEditor } from "../../components/CodeEditor"
+import { CurveballBanner } from "../../components/CurveballBanner"
 import { ExamStateDebugPanel } from "../../components/ExamStateDebugPanel"
 import { ExamTimer } from "../../components/ExamTimer"
 import { MockTerminal } from "../../components/MockTerminal"
+import { Badge } from "../../components/ui/badge"
+import { Button } from "../../components/ui/button"
+import { Card, CardContent } from "../../components/ui/card"
+import {
+  CURVEBALL_MESSAGE,
+  INITIAL_CODE,
+  SESSION_KEYS,
+} from "../../lib/constants"
+import { navigateTo } from "../../lib/navigation"
+import { classifyIntent } from "../../lib/codeAnalysis"
 import { useChat } from "../../hooks/useChat"
 import { useExamState } from "../../hooks/useExamState"
 import { useExamTimer } from "../../hooks/useExamTimer"
 import { useTerminal } from "../../hooks/useTerminal"
-import { EXAM_DURATION_SECONDS, INITIAL_CODE, SESSION_KEYS } from "../../lib/constants"
-import { classifyIntent, deriveApproach, deriveCodeState, isFastCustomSort } from "../../lib/codeAnalysis"
-import { navigateTo } from "../../lib/navigation"
 
 export default function ExamPage() {
-  const [studentName, setStudentName] = useState("Candidate")
-  const [code, setCode] = useState(INITIAL_CODE)
+  const [studentName] = useState(() => {
+    if (typeof window === "undefined") return "Candidate"
+    return sessionStorage.getItem(SESSION_KEYS.STUDENT_NAME) || "Candidate"
+  })
+
+  const [code, setCode] = useState(() => {
+    if (typeof window === "undefined") return INITIAL_CODE
+    return sessionStorage.getItem(SESSION_KEYS.CODE) || INITIAL_CODE
+  })
+
+  const [draft, setDraft] = useState("")
   const [debugVisible, setDebugVisible] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const submitRef = useRef(false)
-  const timerSnapshotRef = useRef({ secondsLeft: EXAM_DURATION_SECONDS, curveballFired: false })
 
   const chat = useChat(studentName)
   const terminal = useTerminal()
-  const exam = useExamState()
+  const examState = useExamState()
 
-  const handleSubmit = useCallback((reason: "manual" | "timeout") => {
-    if (submitRef.current) return
-    submitRef.current = true
-    setSubmitting(true)
-
-    const timerSnapshot = timerSnapshotRef.current
-    const finalCodeState = deriveCodeState(code)
-    const finalCurveballAddressed = timerSnapshot.curveballFired && finalCodeState === "FIXED_FAST" && isFastCustomSort(code)
-
-    chat.addCodeSnapshot(code)
-    exam.updateFromCode(code, timerSnapshot.curveballFired)
-
-    const payload = {
-      conversationHistory: `${chat.buildTranscript()}\n\nSystem: Assessment ended by ${reason}.`,
-      codeSnapshots: [...chat.getCodeSnapshots(), code].filter((snapshot, index, all) => all.indexOf(snapshot) === index),
-      timeElapsedSeconds: EXAM_DURATION_SECONDS - timerSnapshot.secondsLeft,
-      curveballFired: timerSnapshot.curveballFired,
-      curveballAddressed: finalCurveballAddressed || exam.examState.curveballAddressed,
-      studentName,
-    }
-
-    sessionStorage.removeItem(SESSION_KEYS.RESULTS)
-    sessionStorage.setItem(SESSION_KEYS.EVALUATION_PAYLOAD, JSON.stringify(payload))
-    sessionStorage.setItem(SESSION_KEYS.EVALUATION_PENDING, "true")
-    navigateTo("/results")
-  }, [chat, code, exam, studentName])
-
-  const onCurveball = useCallback(() => {
-    chat.injectCurveball()
-    exam.markCurveballSeen()
-  }, [chat, exam])
-
-  const timer = useExamTimer({
-    onCurveball,
-    onExpire: () => handleSubmit("timeout"),
-    autoStart: true,
+  const { secondsLeft, curveballFired, formattedTime } = useExamTimer({
+    onCurveball: () => {
+      chat.injectCurveball()
+      examState.markCurveballSeen()
+    },
+    onExpire: () => {
+      void submitAssessment(true)
+    },
   })
 
   useEffect(() => {
-    timerSnapshotRef.current = {
-      secondsLeft: timer.secondsLeft,
-      curveballFired: timer.curveballFired,
+    if (!studentName || studentName === "Candidate") {
+      navigateTo("/")
     }
-  }, [timer.secondsLeft, timer.curveballFired])
+  }, [studentName])
 
   useEffect(() => {
-    const storedName = sessionStorage.getItem(SESSION_KEYS.STUDENT_NAME)
-    if (!storedName) {
-      navigateTo("/")
+    sessionStorage.setItem(SESSION_KEYS.CODE, code)
+  }, [code])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return
+      }
+
+      if (event.key === "`") {
+        setDebugVisible((prev) => !prev)
+      }
+
+      if (event.shiftKey && event.key.toLowerCase() === "d" && !curveballFired) {
+        chat.injectCurveball()
+        examState.markCurveballSeen()
+      }
+
+      if (event.ctrlKey && event.key === "Enter") {
+        event.preventDefault()
+        runCurrentCode()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [curveballFired, chat, code])
+
+  const sessionStatus = useMemo(() => {
+    if (secondsLeft <= 30) return "critical"
+    if (secondsLeft <= 120) return "warning"
+    return "stable"
+  }, [secondsLeft])
+
+  function runCurrentCode() {
+    terminal.executeCode(code)
+    chat.recordCodeSnapshot(code)
+    examState.updateFromCode(code, chat.curveballFired)
+    examState.registerInteraction(classifyIntent(code))
+  }
+
+  async function handleSend() {
+    const trimmed = draft.trim()
+    if (!trimmed || chat.isTyping) return
+
+    const intent = classifyIntent(trimmed)
+    examState.registerInteraction(intent)
+    chat.recordCodeSnapshot(code)
+    await chat.sendMessage(trimmed, examState.examState, code)
+    examState.updateFromCode(code, chat.curveballFired)
+    setDraft("")
+  }
+
+  function resetSession() {
+    sessionStorage.removeItem(SESSION_KEYS.STUDENT_NAME)
+    sessionStorage.removeItem(SESSION_KEYS.EXAM_STATE)
+    sessionStorage.removeItem(SESSION_KEYS.MESSAGES)
+    sessionStorage.removeItem(SESSION_KEYS.CODE)
+    sessionStorage.removeItem(SESSION_KEYS.TIMER)
+    sessionStorage.removeItem(SESSION_KEYS.RESULTS)
+    sessionStorage.removeItem(SESSION_KEYS.EVALUATION_PAYLOAD)
+    sessionStorage.removeItem(SESSION_KEYS.EVALUATION_PENDING)
+    navigateTo("/")
+  }
+
+  async function submitAssessment(auto = false) {
+    if (submitting) return
+    setSubmitting(true)
+
+    const payload = {
+      conversationHistory: chat.buildTranscript(),
+      codeSnapshots: chat.codeSnapshots.length > 0 ? chat.codeSnapshots : [code],
+      timeElapsedSeconds: Math.max(0, 600 - secondsLeft),
+      curveballFired: chat.curveballFired,
+      curveballAddressed: examState.examState.curveballAddressed,
+      studentName,
+    }
+
+    sessionStorage.setItem(SESSION_KEYS.EVALUATION_PAYLOAD, JSON.stringify(payload))
+    sessionStorage.setItem(SESSION_KEYS.EVALUATION_PENDING, "true")
+    sessionStorage.removeItem(SESSION_KEYS.RESULTS)
+
+    if (auto) {
+      navigateTo("/results")
       return
     }
-    setStudentName(storedName)
-  }, [])
 
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if (e.key === "`") setDebugVisible(prev => !prev)
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [])
-
-  function handleRun() {
-    terminal.executeCode(code)
-    chat.addCodeSnapshot(code)
-    exam.updateFromCode(code, timer.curveballFired)
-  }
-
-  function handleChatSend(text: string) {
-    const intent = exam.recordIntent(text)
-    const lower = text.toLowerCase()
-    const hintRequested = lower.includes("hint") || lower.includes("help") || lower.includes("confused")
-    if (hintRequested) exam.incrementHints()
-    exam.incrementTurns()
-
-    const codeState = deriveCodeState(code)
-    const curveballSeen = exam.examState.curveballSeen || timer.curveballFired
-    const stateForChat = {
-      ...exam.examState,
-      lastIntentClass: intent,
-      turnsElapsed: exam.examState.turnsElapsed + 1,
-      hintsGiven: exam.examState.hintsGiven + (hintRequested ? 1 : 0),
-      lastCodeState: codeState,
-      bugFixed: codeState === "FIXED_SLOW" || codeState === "FIXED_FAST",
-      approach: deriveApproach(code, codeState),
-      curveballSeen,
-      curveballAddressed: codeState === "FIXED_FAST" && curveballSeen,
-    }
-
-    exam.updateFromCode(code, timer.curveballFired)
-    chat.sendMessage(text, stateForChat, code)
-  }
-
-  function handleCopy() {
-    navigator.clipboard?.writeText(code).catch(() => undefined)
+    navigateTo("/results")
   }
 
   return (
-    <main style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#0f0f0f" }}>
-      <ExamTimer secondsLeft={timer.secondsLeft} studentName={studentName} />
+    <main className="min-h-screen px-4 py-4 text-zinc-100 sm:px-6 lg:px-8 lg:py-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-7xl flex-col gap-4 lg:gap-5">
+        <Card className="border-white/10 bg-white/[0.03]">
+          <CardContent className="flex flex-col gap-4 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant={sessionStatus === "critical" ? "error" : sessionStatus === "warning" ? "warning" : "outline"}>
+                    LIVE SESSION
+                  </Badge>
+                  <span className="text-xs text-zinc-500">clean interface • high signal • no clutter</span>
+                </div>
 
-      <div style={{
-        flex: 1,
-        display: "grid",
-        gridTemplateColumns: "55% 45%",
-        minHeight: 0,
-      }}>
-        <CodeEditor
-          value={code}
-          onChange={setCode}
-          onRun={handleRun}
-          onCopy={handleCopy}
-          disabled={submitting}
-        />
-        <ChatPanel
-          messages={chat.messages}
-          isTyping={chat.isTyping}
-          onSendMessage={handleChatSend}
-          disabled={submitting}
-        />
-      </div>
+                <h1 className="text-2xl font-semibold tracking-[-0.05em] sm:text-3xl">
+                  Production Sort Assessment
+                </h1>
+                <p className="max-w-3xl text-sm leading-6 text-zinc-400">
+                  Debug the module, ask the interviewer for clarity, and adapt when the requirement changes.
+                </p>
+              </div>
 
-      <MockTerminal outputs={terminal.outputs} />
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="ghost" onClick={resetSession}>
+                  <ArrowLeft size={15} />
+                  Exit
+                </Button>
+                <div className="rounded-2xl border border-white/8 bg-white/[0.02] px-3 py-2 text-xs text-zinc-400">
+                  Press <span className="text-zinc-200">`</span> for debug
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-white/[0.02] px-3 py-2 text-xs text-zinc-400">
+                  <span className="text-zinc-200">Ctrl</span> + <span className="text-zinc-200">Enter</span> runs code
+                </div>
+              </div>
+            </div>
 
-      <div style={{
-        position: "fixed",
-        right: "18px",
-        bottom: "176px",
-        display: "flex",
-        gap: "8px",
-        zIndex: 30,
-      }}>
-        <button
-          onClick={() => handleSubmit("manual")}
-          disabled={submitting}
-          style={{
-            background: submitting ? "#27272a" : "#22c55e",
-            border: "none",
-            borderRadius: "8px",
-            color: "white",
-            padding: "10px 14px",
-            fontWeight: 800,
-            fontSize: "13px",
-            cursor: submitting ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
-          }}
-        >
-          {submitting && <Loader2 size={16} className="animate-spin" />}
-          {submitting ? "Opening results..." : "Submit Assessment"}
-        </button>
-      </div>
+            <ExamTimer
+              secondsLeft={secondsLeft}
+              studentName={studentName}
+              curveballFired={chat.curveballFired}
+            />
+          </CardContent>
+        </Card>
 
-      {submitting && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.62)",
-          zIndex: 20,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          pointerEvents: "none",
-        }}>
-          <div style={{
-            border: "1px solid #3730a3",
-            background: "#111",
-            borderRadius: "14px",
-            padding: "22px 26px",
-            color: "#e4e4e4",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
-          }}>
-            <Loader2 size={22} className="animate-spin" color="#818cf8" />
-            Sending session to results evaluator...
+        {chat.curveballFired ? <CurveballBanner message={CURVEBALL_MESSAGE} /> : null}
+
+        <div className="grid gap-4 lg:grid-cols-[1.08fr_0.92fr] lg:gap-5">
+          <CodeEditor
+            code={code}
+            onChange={setCode}
+            onRun={runCurrentCode}
+            onSubmit={() => void submitAssessment(false)}
+          />
+
+          <ChatPanel
+            studentName={studentName}
+            messages={chat.messages}
+            draft={draft}
+            onDraftChange={setDraft}
+            onSend={() => void handleSend()}
+            isTyping={chat.isTyping}
+          />
+        </div>
+
+        <MockTerminal outputs={terminal.outputs} onClear={terminal.clearTerminal} />
+
+        <div className="flex flex-col gap-3 rounded-3xl border border-white/8 bg-white/[0.02] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1 text-sm text-zinc-400">
+            <div className="font-medium text-zinc-200">Session controls</div>
+            <div>Run the code, keep the conversation moving, and submit when the solution is ready.</div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={runCurrentCode}>
+              <ShieldCheck size={15} />
+              Run code
+            </Button>
+            <Button onClick={() => void submitAssessment(false)} disabled={submitting}>
+              <RotateCcw size={15} />
+              Submit assessment
+            </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      <ExamStateDebugPanel examState={exam.examState} visible={debugVisible} />
+      <ExamStateDebugPanel examState={examState.examState} visible={debugVisible} />
     </main>
   )
 }

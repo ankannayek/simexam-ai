@@ -1,176 +1,142 @@
 "use client"
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+
+import { Send, Sparkles, UserRound } from "lucide-react"
+import { useEffect, useMemo, useRef } from "react"
 import { ChatMessage } from "../types/index"
 import { CurveballBanner } from "./CurveballBanner"
 import { TypingIndicator } from "./TypingIndicator"
+import { Button } from "./ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 
-interface Props {
+interface ChatPanelProps {
+  studentName: string
   messages: ChatMessage[]
+  draft: string
+  onDraftChange: (value: string) => void
+  onSend: () => void
   isTyping: boolean
-  onSendMessage: (text: string) => void
-  disabled?: boolean
 }
 
-export function ChatPanel({ messages, isTyping, onSendMessage, disabled }: Props) {
-  const [input, setInput] = useState("")
-  const bottomRef = useRef<HTMLDivElement>(null)
+export function ChatPanel({
+  studentName,
+  messages,
+  draft,
+  onDraftChange,
+  onSend,
+  isTyping,
+}: ChatPanelProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    })
   }, [messages, isTyping])
 
-  function handleSend() {
-    const text = input.trim()
-    if (!text || disabled || isTyping) return
-    setInput("")
-    onSendMessage(text)
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
+  const visibleMessages = useMemo(
+    () => messages.filter((message) => message.role !== "system"),
+    [messages]
+  )
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#141414" }}>
-      <div style={{
-        padding: "10px 16px",
-        borderBottom: "1px solid #2a2a2a",
-        background: "#111",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-      }}>
-        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e" }} />
-        <span style={{ color: "#e4e4e4", fontSize: "13px", fontWeight: "600" }}>Alex Chen — Senior Dev</span>
-        <span style={{
-          marginLeft: "auto",
-          color: "#888",
-          fontSize: "11px",
-          background: "#1f1f1f",
-          padding: "2px 8px",
-          borderRadius: "4px",
-          border: "1px solid #2a2a2a",
-        }}>
-          Simulator Agent
-        </span>
-      </div>
+    <Card className="overflow-hidden border-white/10 bg-white/[0.035]">
+      <CardHeader className="border-b border-white/8 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl sm:text-2xl">AI interviewer</CardTitle>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">
+              Ask for clarification, explain your changes, or talk through the approach.
+            </p>
+          </div>
 
-      <div style={{
-        flex: 1,
-        overflowY: "auto",
-        padding: "12px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-      }}>
-        {messages.map(msg => {
-          if (msg.role === "pm") {
-            return <CurveballBanner key={msg.id} message={msg.content} timestamp={msg.timestamp} />
-          }
+          <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-emerald-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            LIVE
+          </div>
+        </div>
+      </CardHeader>
 
-          const isStudent = msg.role === "student"
-          return (
-            <div key={msg.id} style={{
-              display: "flex",
-              flexDirection: isStudent ? "row-reverse" : "row",
-              gap: "8px",
-              alignItems: "flex-start",
-            }}>
-              <div style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "50%",
-                background: isStudent ? "#374151" : "#1e1b4b",
-                border: `1px solid ${isStudent ? "#4b5563" : "#4338ca"}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "10px",
-                color: isStudent ? "#9ca3af" : "#a5b4fc",
-                flexShrink: 0,
-                fontWeight: "700",
-              }}>
-                {isStudent ? "ME" : "AC"}
-              </div>
-
-              <div style={{
-                maxWidth: "82%",
-                background: isStudent ? "#1f2937" : "#1a1a2e",
-                border: `1px solid ${isStudent ? "#374151" : "#312e81"}`,
-                borderRadius: isStudent ? "12px 4px 12px 12px" : "4px 12px 12px 12px",
-                padding: "8px 12px",
-              }}>
-                <p style={{
-                  color: msg.isError ? "#ef4444" : "#e4e4e4",
-                  fontSize: "13px",
-                  lineHeight: "1.5",
-                  margin: 0,
-                  whiteSpace: "pre-wrap",
-                }}>
-                  {msg.content}
-                  {msg.streaming && (
-                    <span style={{
-                      display: "inline-block",
-                      width: "2px",
-                      height: "14px",
-                      background: "#6366f1",
-                      marginLeft: "2px",
-                      animation: "cursorBlink 0.8s step-start infinite",
-                      verticalAlign: "text-bottom",
-                    }} />
-                  )}
-                </p>
-              </div>
-            </div>
-          )
-        })}
-
-        {isTyping && <TypingIndicator />}
-        <div ref={bottomRef} />
-      </div>
-
-      <div style={{ padding: "12px 16px", borderTop: "1px solid #2a2a2a", display: "flex", gap: "8px" }}>
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={disabled ? "Exam ended" : "Ask Alex a question... (Enter to send)"}
-          disabled={disabled || isTyping}
-          rows={2}
-          style={{
-            flex: 1,
-            background: "#1f1f1f",
-            border: "1px solid #2a2a2a",
-            borderRadius: "6px",
-            color: "#e4e4e4",
-            fontSize: "13px",
-            padding: "8px 12px",
-            resize: "none",
-            outline: "none",
-            fontFamily: "inherit",
-          }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || disabled || isTyping}
-          style={{
-            background: "#6366f1",
-            border: "none",
-            borderRadius: "6px",
-            color: "#fff",
-            padding: "0 14px",
-            fontWeight: "600",
-            fontSize: "13px",
-            cursor: "pointer",
-            opacity: (!input.trim() || disabled || isTyping) ? 0.4 : 1,
-          }}
+      <CardContent className="flex h-full flex-col p-4 sm:p-5">
+        <div
+          ref={scrollRef}
+          className="min-h-[460px] max-h-[560px] flex-1 space-y-3 overflow-y-auto rounded-3xl border border-white/8 bg-zinc-950/75 p-3"
         >
-          Send
-        </button>
-      </div>
-    </div>
+          {visibleMessages.map((message) => {
+            if (message.role === "pm") {
+              return <CurveballBanner key={message.id} message={message.content} />
+            }
+
+            const isStudent = message.role === "student"
+            const bubbleClasses = isStudent
+              ? "ml-auto border-indigo-400/20 bg-indigo-500/10 text-zinc-100"
+              : "mr-auto border-white/8 bg-white/[0.03] text-zinc-100"
+
+            const avatar = isStudent ? studentName.slice(0, 2).toUpperCase() || "YO" : "AC"
+
+            return (
+              <div
+                key={message.id}
+                className={`flex max-w-[92%] items-start gap-3 ${isStudent ? "ml-auto flex-row-reverse" : ""}`}
+              >
+                <div
+                  className={[
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
+                    isStudent
+                      ? "border-indigo-400/25 bg-indigo-500/15 text-indigo-100"
+                      : "border-white/10 bg-white/[0.04] text-zinc-200",
+                  ].join(" ")}
+                >
+                  {avatar}
+                </div>
+
+                <div className={`rounded-3xl border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.18)] ${bubbleClasses}`}>
+                  <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                  {message.streaming ? (
+                    <span className="ml-1 inline-block animate-pulse text-indigo-300">▌</span>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+
+          {isTyping ? <TypingIndicator /> : null}
+        </div>
+
+        <div className="mt-4 space-y-3 rounded-2xl border border-white/8 bg-white/[0.02] p-3">
+          <textarea
+            value={draft}
+            onChange={(event) => onDraftChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault()
+                onSend()
+              }
+            }}
+            rows={3}
+            placeholder="Ask about the bug, the output, or the next step..."
+            className="w-full resize-none rounded-xl border border-white/8 bg-zinc-950/80 px-3 py-3 text-sm leading-6 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-indigo-400/60 focus:ring-2 focus:ring-indigo-500/15"
+          />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+                <Sparkles size={12} />
+                Ask for hints, not solutions
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
+                <UserRound size={12} />
+                Conversation stays on task
+              </span>
+            </div>
+
+            <Button onClick={onSend} className="sm:w-auto">
+              <Send size={15} />
+              Send
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

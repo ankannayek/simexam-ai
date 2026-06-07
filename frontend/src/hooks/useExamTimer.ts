@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { EXAM_DURATION_SECONDS, CURVEBALL_TRIGGER_SECONDS } from "../lib/constants"
+import { CURVEBALL_TRIGGER_SECONDS, EXAM_DURATION_SECONDS } from "../lib/constants"
+import { formatTime } from "../lib/utils"
 
 interface UseExamTimerOptions {
   onCurveball: () => void
@@ -7,35 +8,45 @@ interface UseExamTimerOptions {
   autoStart?: boolean
 }
 
-export function useExamTimer({ onCurveball, onExpire, autoStart = true }: UseExamTimerOptions) {
+export function useExamTimer({
+  onCurveball,
+  onExpire,
+  autoStart = true,
+}: UseExamTimerOptions) {
   const [secondsLeft, setSecondsLeft] = useState(EXAM_DURATION_SECONDS)
   const [running, setRunning] = useState(autoStart)
   const [curveballFired, setCurveballFired] = useState(false)
+
   const curveballRef = useRef(false)
   const onCurveballRef = useRef(onCurveball)
   const onExpireRef = useRef(onExpire)
 
-  useEffect(() => { onCurveballRef.current = onCurveball }, [onCurveball])
-  useEffect(() => { onExpireRef.current = onExpire }, [onExpire])
+  useEffect(() => {
+    onCurveballRef.current = onCurveball
+  }, [onCurveball])
+
+  useEffect(() => {
+    onExpireRef.current = onExpire
+  }, [onExpire])
 
   useEffect(() => {
     if (!running) return
 
-    const interval = setInterval(() => {
-      setSecondsLeft(prev => {
+    const interval = window.setInterval(() => {
+      setSecondsLeft((prev) => {
         const next = prev - 1
         const elapsed = EXAM_DURATION_SECONDS - next
 
         if (elapsed === CURVEBALL_TRIGGER_SECONDS && !curveballRef.current) {
           curveballRef.current = true
           setCurveballFired(true)
-          setTimeout(() => onCurveballRef.current(), 0)
+          window.setTimeout(() => onCurveballRef.current(), 0)
         }
 
         if (next <= 0) {
-          clearInterval(interval)
+          window.clearInterval(interval)
           setRunning(false)
-          setTimeout(() => onExpireRef.current(), 0)
+          window.setTimeout(() => onExpireRef.current(), 0)
           return 0
         }
 
@@ -43,29 +54,26 @@ export function useExamTimer({ onCurveball, onExpire, autoStart = true }: UseExa
       })
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => window.clearInterval(interval)
   }, [running])
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.shiftKey && e.key.toLowerCase() === "d" && !curveballRef.current) {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.shiftKey && event.key.toLowerCase() === "d" && !curveballRef.current) {
         curveballRef.current = true
         setCurveballFired(true)
         onCurveballRef.current()
       }
     }
+
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
   return {
     secondsLeft,
-    curveballFired,
     running,
-    formatTime: (s: number) => {
-      const m = Math.floor(s / 60)
-      const sec = s % 60
-      return `${m}:${String(sec).padStart(2, "0")}`
-    },
+    curveballFired,
+    formattedTime: formatTime(secondsLeft),
   }
 }
