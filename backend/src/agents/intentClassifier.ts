@@ -62,6 +62,17 @@ export function classifyIntent(message: string): IntentClass {
   }
 
   if (
+    lower.includes("docs") ||
+    lower.includes("documentation") ||
+    lower.includes("api reference") ||
+    lower.includes("framework") ||
+    lower.includes("library") ||
+    lower.includes("domain")
+  ) {
+    return "DOUBT_DEEP"
+  }
+
+  if (
     lower.includes("what is") ||
     lower.includes("what does") ||
     lower.includes("explain") ||

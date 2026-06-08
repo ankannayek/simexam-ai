@@ -1,10 +1,19 @@
 import { BACKEND_URL } from "./constants"
-import { EvaluationResult, ExamState, GeminiMessage } from "../types/index"
+import {
+  AgentEvent,
+  EvaluationResult,
+  ExamState,
+  GeminiMessage,
+  SessionSummary,
+  TenantConfig,
+  TerminalOutput,
+} from "../types/index"
 
 export async function streamChat(
   messages: GeminiMessage[],
   studentName: string,
   examState: ExamState,
+  options: { sessionId?: string; orgSlug?: string },
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (message: string) => void
@@ -21,6 +30,8 @@ export async function streamChat(
         messages,
         studentName,
         examState,
+        sessionId: options.sessionId,
+        orgSlug: options.orgSlug,
       }),
     })
   } catch {
@@ -83,6 +94,8 @@ export async function evaluateSession(payload: {
   curveballFired: boolean
   curveballAddressed: boolean
   studentName: string
+  sessionId?: string
+  orgSlug?: string
 }): Promise<EvaluationResult> {
   const response = await fetch(`${BACKEND_URL}/api/evaluate`, {
     method: "POST",
@@ -96,5 +109,84 @@ export async function evaluateSession(payload: {
     throw new Error(`Evaluation failed with status ${response.status}`)
   }
 
+  return response.json()
+}
+
+export async function executeCodeSnapshot(code: string, language = "javascript"): Promise<TerminalOutput> {
+  const response = await fetch(`${BACKEND_URL}/api/execute`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code, language }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Execution failed with status ${response.status}`)
+  }
+
+  const result = await response.json() as { lines?: string[]; status?: TerminalOutput["status"] }
+  return {
+    lines: result.lines?.length ? result.lines : ["No output."],
+    status: result.status || "idle",
+    timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
+  }
+}
+
+export async function fetchTenantConfig(orgSlug: string): Promise<TenantConfig> {
+  const response = await fetch(`${BACKEND_URL}/api/org/${orgSlug}/config`)
+  if (!response.ok) throw new Error(`Tenant config failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function saveTenantConfig(orgSlug: string, config: TenantConfig): Promise<TenantConfig> {
+  const response = await fetch(`${BACKEND_URL}/api/org/${orgSlug}/config`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  })
+  if (!response.ok) throw new Error(`Tenant config save failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function createSession(payload: {
+  orgSlug: string
+  studentName: string
+  email?: string
+  inviteToken?: string
+}): Promise<SessionSummary> {
+  const response = await fetch(`${BACKEND_URL}/api/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Session create failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function submitSession(payload: {
+  sessionId: string
+  finalCode: string
+  timeElapsedSeconds: number
+  curveballFired: boolean
+}): Promise<SessionSummary> {
+  const response = await fetch(`${BACKEND_URL}/api/session/${payload.sessionId}/submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) throw new Error(`Session submit failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function listOrgSessions(orgSlug: string): Promise<SessionSummary[]> {
+  const response = await fetch(`${BACKEND_URL}/api/org/${orgSlug}/sessions`)
+  if (!response.ok) throw new Error(`Sessions failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function fetchSessionEvents(sessionId: string): Promise<AgentEvent[]> {
+  const response = await fetch(`${BACKEND_URL}/api/session/${sessionId}/events`)
+  if (!response.ok) throw new Error(`Events failed with status ${response.status}`)
   return response.json()
 }

@@ -34,6 +34,8 @@ export const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
 
 export const SESSION_KEYS = {
+  ORG_SLUG: "simexam_org_slug",
+  SESSION_ID: "simexam_session_id",
   STUDENT_NAME: "simexam_student_name",
   EXAM_STATE: "simexam_exam_state",
   MESSAGES: "simexam_messages",

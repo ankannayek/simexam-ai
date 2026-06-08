@@ -3,6 +3,10 @@ import cors from "cors"
 import dotenv from "dotenv"
 import chatRouter from "./routes/chat.js"
 import evaluateRouter from "./routes/evaluate.js"
+import executeRouter from "./routes/execute.js"
+import orgRouter from "./routes/org.js"
+import sessionRouter from "./routes/session.js"
+import { hasDatabase, initDatabase } from "./lib/db.js"
 
 dotenv.config()
 
@@ -19,15 +23,31 @@ app.use(express.json({ limit: "2mb" }))
 app.get("/health", (_, res) => {
   res.json({
     status: "ok",
+    database: hasDatabase() ? "configured" : "not_configured",
     model: "gemini-2.0-flash",
-    mode: "DEMO (single student, live Gemini)",
-    production_note: "CAG bank, intent classifier, and async eval queue are scaffolded in src/agents/intentClassifier.ts and src/lib/examStateManager.ts",
+    mode: "agentic backend with optional Neon persistence",
+    production_note: "Set DATABASE_URL for Neon Postgres and JUDGE0_URL for real sandbox execution.",
     timestamp: new Date().toISOString(),
   })
 })
 
+app.post("/api/db/init", async (_req, res) => {
+  if (!hasDatabase()) return res.status(503).json({ error: "DATABASE_URL not configured" })
+
+  try {
+    await initDatabase()
+    return res.json({ ok: true })
+  } catch (err: any) {
+    console.error("[DB] Init failed:", err?.message)
+    return res.status(500).json({ error: "Database initialization failed" })
+  }
+})
+
 app.use("/api/chat", chatRouter)
+app.use("/api/execute", executeRouter)
 app.use("/api/evaluate", evaluateRouter)
+app.use("/api/org", orgRouter)
+app.use("/api/session", sessionRouter)
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[Global Error]", err?.message)

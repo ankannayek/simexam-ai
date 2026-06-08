@@ -1,3 +1,4 @@
 export function navigateTo(path: string) {
-  window.location.assign(path)
+  window.history.pushState({}, "", path)
+  window.dispatchEvent(new PopStateEvent("popstate"))
 }

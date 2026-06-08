@@ -6,14 +6,18 @@ interface UseExamTimerOptions {
   onCurveball: () => void
   onExpire: () => void
   autoStart?: boolean
+  durationSeconds?: number
+  curveballAtSeconds?: number
 }
 
 export function useExamTimer({
   onCurveball,
   onExpire,
   autoStart = true,
+  durationSeconds = EXAM_DURATION_SECONDS,
+  curveballAtSeconds = CURVEBALL_TRIGGER_SECONDS,
 }: UseExamTimerOptions) {
-  const [secondsLeft, setSecondsLeft] = useState(EXAM_DURATION_SECONDS)
+  const [secondsLeft, setSecondsLeft] = useState(durationSeconds)
   const [running, setRunning] = useState(autoStart)
   const [curveballFired, setCurveballFired] = useState(false)
 
@@ -35,9 +39,9 @@ export function useExamTimer({
     const interval = window.setInterval(() => {
       setSecondsLeft((prev) => {
         const next = prev - 1
-        const elapsed = EXAM_DURATION_SECONDS - next
+        const elapsed = durationSeconds - next
 
-        if (elapsed === CURVEBALL_TRIGGER_SECONDS && !curveballRef.current) {
+        if (elapsed === curveballAtSeconds && !curveballRef.current) {
           curveballRef.current = true
           setCurveballFired(true)
           window.setTimeout(() => onCurveballRef.current(), 0)
@@ -55,7 +59,7 @@ export function useExamTimer({
     }, 1000)
 
     return () => window.clearInterval(interval)
-  }, [running])
+  }, [curveballAtSeconds, durationSeconds, running])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { Check, Copy, Play } from "lucide-react"
+import Editor from "@monaco-editor/react"
 import { useMemo, useState } from "react"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
@@ -11,6 +12,9 @@ interface CodeEditorProps {
   onRun: () => void
   onSubmit: () => void
   onCopy?: () => void
+  language?: string
+  languages?: string[]
+  onLanguageChange?: (language: string) => void
 }
 
 export function CodeEditor({
@@ -19,6 +23,9 @@ export function CodeEditor({
   onRun,
   onSubmit,
   onCopy,
+  language = "javascript",
+  languages = ["javascript"],
+  onLanguageChange,
 }: CodeEditorProps) {
   const [copied, setCopied] = useState(false)
 
@@ -61,7 +68,19 @@ export function CodeEditor({
         <div className="overflow-hidden rounded-3xl border border-white/8 bg-zinc-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
           <div className="flex items-center justify-between border-b border-white/8 px-4 py-3 text-xs text-zinc-500">
             <span className="font-medium tracking-[0.14em]">PRODUCTION-SORT.JS</span>
-            <span className="font-mono">Ln 1, Col 1</span>
+            {languages.length > 1 ? (
+              <select
+                value={language}
+                onChange={(event) => onLanguageChange?.(event.target.value)}
+                className="rounded-xl border border-white/10 bg-zinc-950 px-2 py-1 text-xs text-zinc-200 outline-none"
+              >
+                {languages.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-mono">{language}</span>
+            )}
           </div>
 
           <div className="flex min-h-[520px]">
@@ -73,15 +92,25 @@ export function CodeEditor({
               ))}
             </div>
 
-            <textarea
-              value={code}
-              onChange={(event) => onChange(event.target.value)}
-              spellCheck={false}
-              autoCapitalize="off"
-              autoComplete="off"
-              autoCorrect="off"
-              className="min-h-[520px] flex-1 resize-none bg-transparent px-4 py-4 font-mono text-[14px] leading-7 text-zinc-100 outline-none placeholder:text-zinc-600"
-            />
+            <div className="min-h-[520px] flex-1 overflow-hidden">
+              <Editor
+                height="520px"
+                language={language === "javascript" ? "javascript" : language}
+                value={code}
+                onChange={(value) => onChange(value || "")}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  lineNumbers: "off",
+                  fontSize: 14,
+                  lineHeight: 24,
+                  scrollBeyondLastLine: false,
+                  wordWrap: "on",
+                  padding: { top: 16, bottom: 16 },
+                  automaticLayout: true,
+                }}
+              />
+            </div>
           </div>
         </div>
 

@@ -2,9 +2,12 @@ export type IntentClass =
   | "HINT_REQUEST"
   | "CODE_PASTE"
   | "CONCEPT_QUESTION"
+  | "DOUBT_DEEP"
   | "CURVEBALL_ACK"
   | "DONE_SIGNAL"
   | "OFF_TOPIC"
+  | "SILENCE_TIMEOUT"
+  | "CODE_STALE"
   | "NOVEL_INPUT"
 
 export type CodeState =
@@ -33,7 +36,79 @@ export interface GeminiMessage {
 export interface ChatRequestBody {
   messages: GeminiMessage[]
   studentName: string
-  examState: ExamState
+  examState?: ExamState
+  sessionId?: string
+  orgSlug?: string
+}
+
+export interface RubricDimension {
+  name: string
+  weight: number
+  description: string
+  scoringHints?: string[]
+}
+
+export interface TestCase {
+  input: unknown
+  expectedOutput: unknown
+  hidden?: boolean
+}
+
+export interface TenantConfig {
+  orgId: string
+  orgSlug: string
+  branding: {
+    name: string
+    logoUrl?: string
+    primaryColor: string
+    accentColor?: string
+  }
+  exam: {
+    configId?: string
+    title: string
+    description?: string
+    problemStatement: string
+    starterCode: string
+    allowedLanguages: string[]
+    timeLimitSeconds: number
+    curveballAtSeconds: number
+    curveballMessage?: string
+    testCases: TestCase[]
+    knowledgeBaseUrls: string[]
+  }
+  agent: {
+    personaName: string
+    personaRole: string
+    systemPromptAdditions?: string
+  }
+  rubric: {
+    dimensions: RubricDimension[]
+    passingScore: number
+  }
+}
+
+export interface AgentEvent {
+  id: string
+  sessionId: string
+  eventType: "message" | "code_run" | "tool_call" | "proactive" | "curveball" | "submission" | "evaluation"
+  actor: "student" | "agent" | "system"
+  content?: string
+  metadata?: Record<string, unknown>
+  createdAt: string
+}
+
+export interface SessionSummary {
+  id: string
+  orgId: string
+  studentId: string | null
+  configId: string
+  status: "active" | "submitted" | "evaluated"
+  startedAt: string
+  submittedAt?: string | null
+  timeElapsedSeconds?: number | null
+  finalCode?: string | null
+  curveballFired: boolean
+  passed?: boolean | null
 }
 
 export interface EvaluateRequestBody {
@@ -43,6 +118,8 @@ export interface EvaluateRequestBody {
   curveballFired: boolean
   curveballAddressed: boolean
   studentName: string
+  sessionId?: string
+  orgSlug?: string
 }
 
 export interface EvaluationResult {
@@ -50,6 +127,10 @@ export interface EvaluationResult {
   adaptability: number
   communication: number
   efficiency: number
+  doubtResolution?: number
+  testsPassed?: number
+  testsTotal?: number
+  dimensionScores?: Record<string, number>
   overallFeedback: string
   strengths: string[]
   improvements: string[]
@@ -58,6 +139,22 @@ export interface EvaluationResult {
 
 export interface TerminalOutput {
   lines: string[]
-  status: "success" | "warning" | "error"
+  status: "success" | "warning" | "error" | "idle"
   timestamp: string
+}
+
+export interface ExecuteRequestBody {
+  code: string
+  language?: string
+  sessionId?: string
+}
+
+export interface ExecuteResult {
+  stdout: string
+  stderr: string
+  exitCode: number
+  status: "success" | "warning" | "error"
+  lines: string[]
+  testsPassed?: number
+  testsTotal?: number
 }

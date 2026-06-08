@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { runCode } from "../lib/terminalPatterns"
+import { executeCodeSnapshot } from "../lib/api"
 import { TerminalOutput } from "../types/index"
 
 export function useTerminal() {
@@ -11,10 +11,20 @@ export function useTerminal() {
     },
   ])
 
-  const executeCode = useCallback((code: string) => {
-    const output = runCode(code)
-    setOutputs((prev) => [...prev, output])
-    return output
+  const executeCode = useCallback(async (code: string) => {
+    try {
+      const output = await executeCodeSnapshot(code)
+      setOutputs((prev) => [...prev, output])
+      return output
+    } catch {
+      const output: TerminalOutput = {
+        lines: ["Cannot reach /api/execute. Make sure the backend is running."],
+        status: "error",
+        timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
+      }
+      setOutputs((prev) => [...prev, output])
+      return output
+    }
   }, [])
 
   const clearTerminal = useCallback(() => {

@@ -6,7 +6,7 @@ import { TerminalOutput } from "../types/index"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 
-interface MockTerminalProps {
+interface RealTerminalProps {
   outputs: TerminalOutput[]
   onClear: () => void
 }
@@ -24,7 +24,7 @@ function statusStyle(status: TerminalOutput["status"]) {
   }
 }
 
-export function MockTerminal({ outputs, onClear }: MockTerminalProps) {
+export function RealTerminal({ outputs, onClear }: RealTerminalProps) {
   const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export function MockTerminal({ outputs, onClear }: MockTerminalProps) {
           <div>
             <CardTitle className="text-xl sm:text-2xl">Terminal output</CardTitle>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Immediate feedback from the current code snapshot.
+              Feedback from the backend execution service.
             </p>
           </div>
 

@@ -1,25 +1,27 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ChatMessage, ExamState, GeminiMessage } from "../types/index"
+import { ChatMessage, ExamState, GeminiMessage, TenantConfig } from "../types/index"
 import { CURVEBALL_MESSAGE, SESSION_KEYS, SIMULATOR_OPENING_MESSAGE } from "../lib/constants"
 import { streamChat } from "../lib/api"
 import { generateId } from "../lib/utils"
 
-function openingMessage(name: string): ChatMessage {
+function openingMessage(name: string, tenant?: TenantConfig | null): ChatMessage {
   return {
     id: generateId(),
     role: "simulator",
-    content: SIMULATOR_OPENING_MESSAGE(name),
+    content: tenant
+      ? `Hey ${name} - welcome to ${tenant.branding.name}. I have loaded ${tenant.exam.title}; start with the code and talk me through what you notice.`
+      : SIMULATOR_OPENING_MESSAGE(name),
     timestamp: Date.now(),
   }
 }
 
-function loadMessages(studentName: string): ChatMessage[] {
-  if (typeof window === "undefined") return [openingMessage(studentName)]
+function loadMessages(studentName: string, tenant?: TenantConfig | null): ChatMessage[] {
+  if (typeof window === "undefined") return [openingMessage(studentName, tenant)]
 
   const raw = sessionStorage.getItem(SESSION_KEYS.MESSAGES)
-  if (!raw) return [openingMessage(studentName)]
+  if (!raw) return [openingMessage(studentName, tenant)]
 
   try {
     const parsed = JSON.parse(raw) as ChatMessage[]
@@ -28,7 +30,7 @@ function loadMessages(studentName: string): ChatMessage[] {
     // ignore invalid storage
   }
 
-  return [openingMessage(studentName)]
+  return [openingMessage(studentName, tenant)]
 }
 
 function toGeminiHistory(messages: ChatMessage[]): GeminiMessage[] {
@@ -44,8 +46,12 @@ function toGeminiHistory(messages: ChatMessage[]): GeminiMessage[] {
     }))
 }
 
-export function useChat(studentName: string) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(studentName))
+export function useChat(studentName: string, options: {
+  sessionId?: string
+  orgSlug?: string
+  tenant?: TenantConfig | null
+} = {}) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(studentName, options.tenant))
   const [isTyping, setIsTyping] = useState(false)
   const [curveballFired, setCurveballFired] = useState(false)
 
@@ -121,6 +127,7 @@ export function useChat(studentName: string) {
         geminiHistory,
         studentName,
         examState,
+        { sessionId: options.sessionId, orgSlug: options.orgSlug },
         (chunk) => {
           setMessages((prev) =>
             prev.map((message) =>
@@ -159,7 +166,7 @@ export function useChat(studentName: string) {
         }
       )
     },
-    [isTyping, recordCodeSnapshot, studentName]
+    [isTyping, options.orgSlug, options.sessionId, recordCodeSnapshot, studentName]
   )
 
   const buildTranscript = useCallback(() => {
