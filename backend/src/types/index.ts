@@ -54,6 +54,8 @@ export interface TestCase {
   hidden?: boolean
 }
 
+export type AssessmentType = "coding" | "conceptual" | "system_design" | "multiple_choice"
+
 export interface TenantConfig {
   orgId: string
   orgSlug: string
@@ -65,11 +67,12 @@ export interface TenantConfig {
   }
   exam: {
     configId?: string
+    type?: AssessmentType
     title: string
     description?: string
     problemStatement: string
-    starterCode: string
-    allowedLanguages: string[]
+    starterCode?: string
+    allowedLanguages?: string[]
     timeLimitSeconds: number
     curveballAtSeconds: number
     curveballMessage?: string
@@ -84,6 +87,7 @@ export interface TenantConfig {
   rubric: {
     dimensions: RubricDimension[]
     passingScore: number
+    rubricType?: "deterministic" | "semantic"
   }
 }
 
@@ -114,6 +118,7 @@ export interface SessionSummary {
 export interface EvaluateRequestBody {
   conversationHistory: string
   codeSnapshots: string[]
+  finalCode?: string
   timeElapsedSeconds: number
   curveballFired: boolean
   curveballAddressed: boolean
@@ -157,4 +162,91 @@ export interface ExecuteResult {
   lines: string[]
   testsPassed?: number
   testsTotal?: number
+}
+
+// ── Agent Loop types ──────────────────────────────────────────────
+
+export type ProactiveActionType = 'CODE_STALE' | 'SILENCE_TIMEOUT' | 'CURVEBALL'
+
+export interface AgentTrigger {
+  type: 'student_message' | 'proactive' | 'curveball'
+  sessionId: string
+  orgSlug: string
+  message?: string
+  code?: string
+  examState: ExamState
+  tenantConfig: TenantConfig
+  proactiveAction?: ProactiveActionType
+}
+
+export interface ToolResult {
+  resolved: boolean
+  source: 'cag' | 'cag_static' | 'sandbox' | 'rag' | 'web_search' | 'doc_fetch' | 'llm'
+  content: string
+  metadata?: Record<string, unknown>
+}
+
+export type IntentHandler = (trigger: AgentTrigger, context: AgentLoopContext) => Promise<ToolResult>
+
+export interface AgentLoopContext {
+  sessionId: string
+  orgSlug: string
+  tenantConfig: TenantConfig
+  examState: ExamState
+  messages: GeminiMessage[]
+  studentName: string
+}
+
+// ── RAG / Upload types ────────────────────────────────────────────
+
+export interface UploadedDoc {
+  id: string
+  orgId: string
+  sessionId?: string
+  filename: string
+  mimeType?: string
+  sizeBytes?: number
+  storageUrl?: string
+  status: 'processing' | 'ready' | 'error'
+  chunkCount?: number
+  createdAt: string
+}
+
+export interface DocChunk {
+  id: string
+  docId: string
+  orgId: string
+  sessionId?: string
+  chunkIndex: number
+  content: string
+  metadata?: Record<string, unknown>
+  createdAt: string
+}
+
+// ── Sandbox types ─────────────────────────────────────────────────
+
+export interface SandboxResult {
+  stdout: string
+  stderr: string
+  exitCode: number
+  testsPassed?: number
+  testsTotal?: number
+  testResults?: Array<{ input: string; expected: string; actual: string; passed: boolean }>
+  executionTime?: number
+}
+
+// ── Security / Auth types ─────────────────────────────────────────
+
+export interface RateLimitConfig {
+  windowMs: number
+  maxRequests: number
+}
+
+export interface JWTPayload {
+  userId: string
+  orgId: string
+  role: 'admin' | 'viewer' | 'student'
+  sessionId?: string
+  iat: number
+  exp: number
 }

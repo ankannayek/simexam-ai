@@ -1,4 +1,5 @@
 import { ExamState, CodeState } from "../types/index.js"
+import { cacheGet, cacheSet } from "./cache.js"
 
 function withoutComments(code: string): string {
   return code
@@ -103,4 +104,15 @@ export function createInitialExamState(): ExamState {
     lastCodeState: "BUGGY_ORIGINAL",
     lastIntentClass: "NOVEL_INPUT",
   }
+}
+
+// ── Redis State Persistence ───────────────────────────────────────
+
+export async function getExamState(sessionId: string): Promise<ExamState | null> {
+  return cacheGet<ExamState>(`exam_state:${sessionId}`)
+}
+
+export async function saveExamState(sessionId: string, state: ExamState): Promise<void> {
+  // Store for 24 hours
+  await cacheSet(`exam_state:${sessionId}`, state, 86400)
 }
