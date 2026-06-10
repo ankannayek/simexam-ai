@@ -190,3 +190,20 @@ export async function fetchSessionEvents(sessionId: string): Promise<AgentEvent[
   if (!response.ok) throw new Error(`Events failed with status ${response.status}`)
   return response.json()
 }
+
+export async function uploadKnowledgeBaseFile(orgSlug: string, file: File, sessionId?: string): Promise<any> {
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("orgSlug", orgSlug)
+  if (sessionId) {
+    formData.append("sessionId", sessionId)
+  }
+  
+  const response = await fetch(`${BACKEND_URL}/api/upload`, {
+    method: "POST",
+    body: formData,
+  })
+  
+  if (!response.ok) throw new Error(`Upload failed with status ${response.status}`)
+  return response.json()
+}

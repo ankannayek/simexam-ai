@@ -12,8 +12,7 @@ from schemas.types import (
 )
 from middleware.security import get_service_key
 
-from agents.eval_agent import evaluate as run_eval
-from agents.semantic_evaluator import evaluate_semantic
+from agents.evaluator import Evaluator
 from agents.rag_agent import retrieve_relevant
 from agents.behavioural_agent import score_behaviour
 from tools.ast_analyser import ASTAnalyser
@@ -40,9 +39,8 @@ async def health():
 @app.post("/eval", dependencies=[Depends(get_service_key)])
 async def evaluate(request: EvalRequest) -> EvalResponse:
     try:
-        if request.assessment_type == "conceptual":
-            return await evaluate_semantic(request)
-        return await run_eval(request)
+        evaluator = Evaluator()
+        return await evaluator.evaluate(request)
     except Exception as e:
         logger.error(f"Eval error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -4,6 +4,7 @@ import { buildCompressedContext, enforceAlternatingRoles } from "../lib/contextB
 import { createSimulatorModel } from "./simulator.js"
 import { withRetry } from "../lib/retryWrapper.js"
 import { buildCAGKey, cagStore } from "../tools/cagTool.js"
+import { SemanticCache } from "../lib/semanticCache.js"
 import {
   getTenantConfigBySlug,
   hasDatabase,
@@ -54,14 +55,32 @@ export async function runAgentLoop(
       studentName: extractStudentName(trigger),
     }
 
-    // ── 2. Route to the right handler ────────────────────────────
-    let result: ToolResult
+    // ── 1.5. Semantic Cache Check ────────────────────────────────
+    let result: ToolResult | null = null
 
-    try {
-      result = await routeIntent(trigger, context)
-    } catch (err: any) {
-      console.error("[AgentLoop] routeIntent failed:", err?.message)
-      result = await fallbackLLMResponse(trigger, context)
+    if (trigger.type !== "proactive" && trigger.message) {
+      try {
+        const cached = await SemanticCache.search(trigger.message, tenantConfig.orgId)
+        if (cached) {
+          result = {
+            resolved: true,
+            source: "cache",
+            content: cached.response,
+          }
+        }
+      } catch (err: any) {
+        console.warn("[AgentLoop] SemanticCache search error:", err?.message)
+      }
+    }
+
+    // ── 2. Route to the right handler ────────────────────────────
+    if (!result) {
+      try {
+        result = await routeIntent(trigger, context)
+      } catch (err: any) {
+        console.error("[AgentLoop] routeIntent failed:", err?.message)
+        result = await fallbackLLMResponse(trigger, context)
+      }
     }
 
     // ── 3. Compose response via stream callback ──────────────────
@@ -108,8 +127,8 @@ export async function runAgentLoop(
       }
     }
 
-    // ── 5. Update CAG for cacheable intents ──────────────────────
-    if (result.source === "llm") {
+    // ── 5. Update CAG & Semantic Cache ───────────────────────────
+    if (result!.source === "llm") {
       const intent = classifyIntent(trigger.message || "")
       if (CACHEABLE_INTENTS.has(intent)) {
         const cagKey = buildCAGKey(
@@ -118,10 +137,17 @@ export async function runAgentLoop(
           trigger.examState.curveballSeen,
           trigger.orgSlug
         )
-        // Fire-and-forget
-        cagStore(cagKey, result.content).catch((err) =>
+        // Fire-and-forget CAG store
+        cagStore(cagKey, result!.content).catch((err) =>
           console.warn("[AgentLoop] CAG store failed:", err?.message)
         )
+        
+        // Fire-and-forget Semantic Cache store
+        if (trigger.message) {
+          SemanticCache.store(trigger.message, result!.content, tenantConfig.orgId).catch((err) =>
+            console.warn("[AgentLoop] SemanticCache store failed:", err?.message)
+          )
+        }
       }
     }
 

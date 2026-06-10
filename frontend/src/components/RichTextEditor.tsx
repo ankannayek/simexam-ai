@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import SimpleMdeReact from "react-simplemde-editor"
 import "easymde/dist/easymde.min.css"
 
@@ -9,9 +9,30 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ value, onChange, onSubmit }: RichTextEditorProps) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const resetTimeout = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => {
+      fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'proactive', action: 'SILENCE_TIMEOUT' })
+      }).catch(err => console.error("Proactive agent error", err))
+    }, 60000)
+  }, [])
+
+  useEffect(() => {
+    resetTimeout()
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [resetTimeout])
+
   const handleChange = useCallback((val: string) => {
     onChange(val);
-  }, [onChange]);
+    resetTimeout();
+  }, [onChange, resetTimeout]);
 
   return (
     <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-[#161618] overflow-hidden">

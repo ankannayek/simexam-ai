@@ -7,28 +7,46 @@ interface CachedResponse {
   similarity?: number;
 }
 
-const inMemoryCache = new Map<string, CachedResponse>();
-
 export class SemanticCache {
   /**
    * Search for a similar query in the cache.
    */
-  static async search(query: string, embedding?: number[], threshold = 0.85): Promise<CachedResponse | null> {
-    // Exact match fallback
-    if (inMemoryCache.has(query)) {
-      return inMemoryCache.get(query) || null;
-    }
-    
-    // For vector search, we do cosine similarity over inMemoryCache values if embedding is provided. 
-    if (embedding && embedding.length > 0) {
-       for (const entry of inMemoryCache.values()) {
-         if (entry.embedding) {
-            const similarity = this.cosineSimilarity(embedding, entry.embedding);
-            if (similarity >= threshold) {
-                return entry;
-            }
-         }
-       }
+  static async search(query: string, orgId: string, embedding?: number[], threshold = 0.85): Promise<CachedResponse | null> {
+    if (!hasDatabase()) return null;
+
+    try {
+      // Exact match fallback
+      const exactRes = await dbQuery(
+        'SELECT query, response, embedding FROM semantic_cache WHERE query = $1 AND org_id = $2 LIMIT 1',
+        [query, orgId]
+      );
+      if (exactRes && exactRes.rows.length > 0) {
+        return {
+          query: exactRes.rows[0].query,
+          response: exactRes.rows[0].response,
+          embedding: exactRes.rows[0].embedding,
+          similarity: 1.0,
+        };
+      }
+      
+      // For vector search
+      if (embedding && embedding.length > 0) {
+        const vectorRes = await dbQuery(
+          'SELECT query, response, embedding, 1 - (embedding <=> $1::vector) as similarity FROM semantic_cache WHERE org_id = $2 AND embedding <=> $1::vector < $3 ORDER BY embedding <=> $1::vector ASC LIMIT 1',
+          [JSON.stringify(embedding), orgId, 1 - threshold]
+        );
+        
+        if (vectorRes && vectorRes.rows.length > 0) {
+          return {
+            query: vectorRes.rows[0].query,
+            response: vectorRes.rows[0].response,
+            embedding: vectorRes.rows[0].embedding,
+            similarity: vectorRes.rows[0].similarity,
+          };
+        }
+      }
+    } catch (err: any) {
+      console.warn("[SemanticCache] search failed:", err?.message);
     }
     
     return null;
@@ -37,20 +55,17 @@ export class SemanticCache {
   /**
    * Store a response in the cache
    */
-  static async store(query: string, response: string, embedding?: number[]): Promise<void> {
-    inMemoryCache.set(query, { query, response, embedding });
-  }
+  static async store(query: string, response: string, orgId: string, embedding?: number[]): Promise<void> {
+    if (!hasDatabase()) return;
 
-  private static cosineSimilarity(a: number[], b: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-        dotProduct += a[i] * b[i];
-        normA += a[i] * a[i];
-        normB += b[i] * b[i];
+    try {
+      const embValue = embedding && embedding.length > 0 ? JSON.stringify(embedding) : null;
+      await dbQuery(
+        'INSERT INTO semantic_cache (org_id, query, response, embedding) VALUES ($1, $2, $3, $4)',
+        [orgId, query, response, embValue]
+      );
+    } catch (err: any) {
+      console.warn("[SemanticCache] store failed:", err?.message);
     }
-    if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 }

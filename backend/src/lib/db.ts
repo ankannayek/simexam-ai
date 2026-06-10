@@ -10,6 +10,7 @@ const { Pool } = pg
 
 export const NEON_SCHEMA_SQL = `
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS orgs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,6 +99,28 @@ CREATE TABLE IF NOT EXISTS code_snapshots (
 
 CREATE INDEX IF NOT EXISTS code_snapshots_session_time_idx
   ON code_snapshots (session_id, created_at);
+
+CREATE TABLE IF NOT EXISTS uploaded_docs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+  filename TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  size_bytes BIGINT NOT NULL,
+  storage_url TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'processing',
+  chunk_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS semantic_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  query TEXT NOT NULL,
+  response TEXT NOT NULL,
+  embedding vector(768),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS evaluations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

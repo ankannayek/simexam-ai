@@ -1,35 +1,62 @@
 from schemas.types import EvalRequest, EvalResponse
 from tools.llm_router import get_llm, TaskType
+import os
+import json
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
 
-async def evaluate_semantic(request: EvalRequest) -> EvalResponse:
-    llm = await get_llm(TaskType.EVAL_LAYER3)
-    
-    # Base dummy evaluation if no LLM key
-    if not llm:
-        return EvalResponse(
-            passed=True,
-            overall_score=75.0,
-            technical_accuracy=7.0,
-            communication=8.0,
-            adaptability=7.0,
-            efficiency=8.0,
-            overall_feedback="Good conceptual understanding shown in the final answer.",
-            strengths=["Clear explanations"],
-            improvements=["Provide more specific examples"]
-        )
+class SemanticEvaluator:
+    async def evaluate(self, request: EvalRequest) -> EvalResponse:
+        groq_api_key = os.environ.get("GROQ_API_KEY")
+        
+        # Base dummy evaluation if no LLM key
+        if not groq_api_key:
+            return EvalResponse(
+                passed=True,
+                overall_score=75.0,
+                technical_accuracy=7.0,
+                communication=8.0,
+                adaptability=7.0,
+                efficiency=8.0,
+                overall_feedback="Good conceptual understanding shown in the final answer. (Dummy)",
+                strengths=["Clear explanations"],
+                improvements=["Provide more specific examples"]
+            )
 
-    # In a real system, we would construct a prompt with the rubric and the student's final essay
-    # then parse the JSON output from the LLM.
-    
-    # For now, return a placeholder semantic evaluation success.
-    return EvalResponse(
-        passed=True,
-        overall_score=85.0,
-        technical_accuracy=8.5,
-        communication=9.0,
-        adaptability=8.0,
-        efficiency=8.0,
-        overall_feedback="Excellent breakdown of the concepts. The essay clearly addressed the core topics in the rubric.",
-        strengths=["Strong conceptual grasp", "Clear writing style"],
-        improvements=["Could dive deeper into edge cases"]
-    )
+        try:
+            llm = ChatGroq(model="llama3-8b-8192", api_key=groq_api_key)
+            parser = JsonOutputParser()
+            
+            rubric_text = ", ".join([f"{d.name} ({d.weight})" for d in request.rubric.dimensions])
+            
+            prompt = PromptTemplate(
+                template="""
+                You are an expert grader. Evaluate the following essay against the rubric: {rubric}.
+                The student's essay: {essay}
+                
+                Respond in valid JSON with the following keys:
+                - passed (boolean)
+                - overall_score (float 0-100)
+                - technical_accuracy (float 0-10)
+                - communication (float 0-10)
+                - adaptability (float 0-10)
+                - efficiency (float 0-10)
+                - overall_feedback (string)
+                - strengths (list of strings)
+                - improvements (list of strings)
+                """,
+                input_variables=["rubric", "essay"],
+            )
+            
+            chain = prompt | llm | parser
+            result = await chain.ainvoke({"rubric": rubric_text, "essay": request.final_code})
+            
+            return EvalResponse(**result)
+            
+        except Exception as e:
+            return EvalResponse(
+                passed=False,
+                overall_score=0.0,
+                overall_feedback=f"Error evaluating essay semantically: {str(e)}"
+            )
