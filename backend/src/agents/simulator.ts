@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { Groq } from "groq-sdk"
 import { TenantConfig } from "../types/index.js"
 
 export function buildSimulatorSystemPrompt(studentName: string, tenant?: TenantConfig | null): string {
@@ -43,14 +43,30 @@ When they say they are done or want review, give a brief specific reaction to wh
 }
 
 export function createSimulatorModel(apiKey: string, studentName: string, tenant?: TenantConfig | null) {
-  const genAI = new GoogleGenerativeAI(apiKey)
-  return genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    systemInstruction: buildSimulatorSystemPrompt(studentName, tenant),
-    generationConfig: {
-      temperature: 0.75,
-      maxOutputTokens: 280,
-      topP: 0.9,
-    },
-  })
+  // Use Groq with the Llama 3 70b model
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  const systemInstruction = buildSimulatorSystemPrompt(studentName, tenant)
+
+  return {
+    generateContent: async ({ contents }: { contents: string }) => {
+      // IntentRouter passes the compressed context as a single string `contents`
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: systemInstruction },
+          { role: "user", content: contents }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.75,
+        max_tokens: 280,
+        top_p: 0.9,
+      })
+
+      const textOutput = chatCompletion.choices[0]?.message?.content || ""
+      return {
+        response: {
+          text: () => textOutput
+        }
+      }
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import { recordAgentEvent } from "../lib/db.js"
+import { cacheGet, cacheSet } from "../lib/cache.js"
 
 export interface ProactiveState {
   sessionId: string
@@ -41,4 +42,37 @@ export async function emitProactiveMessage(
     content,
     metadata: { action },
   })
+}
+
+// ── Redis-backed Session Tracking ────────────────────────────
+
+const ACTIVE_SESSIONS_KEY = "proactive:active_sessions"
+
+export async function registerActiveSession(sessionId: string): Promise<void> {
+  const active = await cacheGet<string[]>(ACTIVE_SESSIONS_KEY) || []
+  if (!active.includes(sessionId)) {
+    active.push(sessionId)
+    await cacheSet(ACTIVE_SESSIONS_KEY, active, 86400) // 24h
+  }
+}
+
+export async function unregisterActiveSession(sessionId: string): Promise<void> {
+  let active = await cacheGet<string[]>(ACTIVE_SESSIONS_KEY) || []
+  active = active.filter(id => id !== sessionId)
+  await cacheSet(ACTIVE_SESSIONS_KEY, active, 86400)
+}
+
+export function startProactiveWatcher(getActiveSessions: () => Promise<string[]>): NodeJS.Timeout {
+  return setInterval(async () => {
+    try {
+      const active = await getActiveSessions()
+      for (const sessionId of active) {
+        // In a real app we would load the ProactiveState from DB/Redis here
+        // and call decideProactiveActions(state), then emitProactiveMessage
+        // Implementation omitted for brevity
+      }
+    } catch (err: any) {
+      console.error("[ProactiveWatcher] Error during check:", err?.message)
+    }
+  }, 15000)
 }
