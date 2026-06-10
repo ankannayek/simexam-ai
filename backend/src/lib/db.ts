@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS exam_configs (
   org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   version INTEGER NOT NULL DEFAULT 1,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  exam_type VARCHAR(50) NOT NULL DEFAULT 'coding',
   title TEXT NOT NULL,
   description TEXT,
   problem_statement TEXT NOT NULL,
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS exam_configs (
   curveball_message TEXT,
   agent_persona JSONB NOT NULL DEFAULT '{}'::jsonb,
   rubric JSONB NOT NULL,
+  rubric_type VARCHAR(50) NOT NULL DEFAULT 'deterministic',
   test_cases JSONB NOT NULL,
   knowledge_base_urls TEXT[] NOT NULL DEFAULT '{}',
   branding JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -164,6 +166,7 @@ type TenantConfigRow = {
   org_slug: string
   org_name: string
   config_id: string
+  exam_type: "coding" | "conceptual" | "system_design" | "multiple_choice"
   title: string
   description: string | null
   problem_statement: string
@@ -174,6 +177,7 @@ type TenantConfigRow = {
   curveball_message: string | null
   agent_persona: Record<string, any>
   rubric: Record<string, any>
+  rubric_type: "deterministic" | "semantic"
   test_cases: any[]
   knowledge_base_urls: string[]
   branding: Record<string, any>
@@ -195,6 +199,7 @@ function mapTenantConfig(row: TenantConfigRow): TenantConfig {
     },
     exam: {
       configId: row.config_id,
+      type: row.exam_type || "coding",
       title: row.title,
       description: row.description || undefined,
       problemStatement: row.problem_statement,
@@ -214,6 +219,7 @@ function mapTenantConfig(row: TenantConfigRow): TenantConfig {
     rubric: {
       dimensions: rubric.dimensions || [],
       passingScore: rubric.passingScore ?? 6,
+      rubricType: row.rubric_type || "deterministic",
     },
   }
 }
@@ -226,6 +232,7 @@ export async function getTenantConfigBySlug(slug: string): Promise<TenantConfig 
       o.slug AS org_slug,
       o.name AS org_name,
       c.id AS config_id,
+      c.exam_type,
       c.title,
       c.description,
       c.problem_statement,
@@ -236,6 +243,7 @@ export async function getTenantConfigBySlug(slug: string): Promise<TenantConfig 
       c.curveball_message,
       c.agent_persona,
       c.rubric,
+      c.rubric_type,
       c.test_cases,
       c.knowledge_base_urls,
       c.branding
@@ -285,6 +293,7 @@ export async function upsertTenantConfig(config: TenantConfig): Promise<TenantCo
         org_id,
         version,
         is_active,
+        exam_type,
         title,
         description,
         problem_statement,
@@ -295,15 +304,17 @@ export async function upsertTenantConfig(config: TenantConfig): Promise<TenantCo
         curveball_message,
         agent_persona,
         rubric,
+        rubric_type,
         test_cases,
         knowledge_base_urls,
         branding
       )
-      VALUES ($1, $2, true, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, $15::jsonb)
+      VALUES ($1, $2, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::jsonb, $14, $15::jsonb, $16, $17::jsonb)
       `,
       [
         orgId,
         version,
+        config.exam.type || "coding",
         config.exam.title,
         config.exam.description || null,
         config.exam.problemStatement,
@@ -318,6 +329,7 @@ export async function upsertTenantConfig(config: TenantConfig): Promise<TenantCo
           systemPromptAdditions: config.agent.systemPromptAdditions,
         }),
         JSON.stringify(config.rubric),
+        config.rubric.rubricType || "deterministic",
         JSON.stringify(config.exam.testCases),
         config.exam.knowledgeBaseUrls,
         JSON.stringify({
