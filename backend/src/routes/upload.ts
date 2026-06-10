@@ -83,6 +83,11 @@ router.post("/", authenticateJWT, upload.single("file"), validate(UploadSchema),
 
   const { orgId, sessionId } = req.body
 
+  if (process.env.ENABLE_AUTH && req.user && req.user.role !== "admin" && req.user.orgId !== orgId) {
+    fs.unlinkSync(req.file.path)
+    return res.status(403).json({ error: "Unauthorized for this organization" })
+  }
+
   if (!validateMagicBytes(req.file.path, req.file.mimetype)) {
     fs.unlinkSync(req.file.path)
     return res.status(400).json({ error: "File content does not match extension" })
@@ -129,13 +134,17 @@ router.get("/:docId/status", authenticateJWT, async (req: Request, res: Response
   }
 
   try {
-    const result = await dbQuery<{ status: string; chunk_count: number }>(
-      "SELECT status, chunk_count FROM uploaded_docs WHERE id = $1",
+    const result = await dbQuery<{ status: string; chunk_count: number; org_id: string }>(
+      "SELECT status, chunk_count, org_id FROM uploaded_docs WHERE id = $1",
       [docId]
     )
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Document not found" })
+    }
+
+    if (process.env.ENABLE_AUTH && req.user && req.user.role !== "admin" && req.user.orgId !== result.rows[0].org_id) {
+      return res.status(403).json({ error: "Unauthorized for this organization" })
     }
 
     res.json({

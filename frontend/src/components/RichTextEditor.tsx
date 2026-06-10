@@ -1,4 +1,6 @@
-import { Textarea } from "./ui/textarea"
+import { useCallback } from "react"
+import SimpleMdeReact from "react-simplemde-editor"
+import "easymde/dist/easymde.min.css"
 
 interface RichTextEditorProps {
   value: string
@@ -7,8 +9,12 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ value, onChange, onSubmit }: RichTextEditorProps) {
+  const handleChange = useCallback((val: string) => {
+    onChange(val);
+  }, [onChange]);
+
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-[#161618]">
+    <div className="flex h-full flex-col rounded-3xl border border-white/10 bg-[#161618] overflow-hidden">
       <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="flex gap-1.5">
@@ -20,12 +26,15 @@ export function RichTextEditor({ value, onChange, onSubmit }: RichTextEditorProp
         </div>
       </div>
       
-      <div className="flex-1 p-4">
-        <Textarea
+      <div className="flex-1 p-4 overflow-auto prose-invert">
+        <SimpleMdeReact
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Write your answer here... Markdown is supported."
-          className="h-full min-h-[400px] w-full resize-none border-none bg-transparent p-0 text-zinc-200 outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          onChange={handleChange}
+          options={{
+            spellChecker: false,
+            status: false,
+            placeholder: "Write your answer here... Markdown is supported.",
+          }}
         />
       </div>
     </div>

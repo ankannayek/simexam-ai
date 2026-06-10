@@ -612,7 +612,43 @@ export default function AdminConfigPage() {
             </CardContent>
           </Card>
 
-          {/* Section 8: Branding */}
+          {/* Section 8: Knowledge Base Files */}
+          <Card className="border-white/10 bg-white/[0.035]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Knowledge Base Files</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="kbUpload">Upload File</Label>
+                <input
+                  id="kbUpload"
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const formData = new FormData()
+                    formData.append("file", file)
+                    try {
+                      const res = await fetch("http://localhost:3001/upload", {
+                        method: "POST",
+                        body: formData,
+                      })
+                      if (res.ok) {
+                        setToast({ type: "success", text: "File uploaded successfully" })
+                      } else {
+                        setToast({ type: "error", text: "Upload failed" })
+                      }
+                    } catch (err) {
+                      setToast({ type: "error", text: "Upload failed" })
+                    }
+                  }}
+                  className="block w-full text-sm text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-indigo-500/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-400 hover:file:bg-indigo-500/20"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 9: Branding */}
           <Card className="border-white/10 bg-white/[0.035]">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Branding</CardTitle>
