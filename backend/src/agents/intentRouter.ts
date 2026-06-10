@@ -111,8 +111,20 @@ const conceptHandler: IntentHandler = async (trigger, context) => {
     return { resolved: true, source: "cag", content: cached }
   }
 
-  // Try web search
+  // Try RAG retrieval first
   let toolContext = ""
+  if (trigger.message && (await isPythonAvailable())) {
+    try {
+      const ragResult = await pythonRetrieve(trigger.message, context.tenantConfig?.orgId || '', context.sessionId)
+      if (ragResult.success && ragResult.data?.length) {
+        toolContext += `Relevant knowledge base:\n${ragResult.data.map((chunk: any, i: number) => `[${i + 1}] ${chunk.content}`).join('\n\n')}\n\n`
+      }
+    } catch (err: any) {
+      console.warn('[IntentRouter] RAG retrieval skipped:', err?.message)
+    }
+  }
+
+  // Try web search
   if (process.env.TAVILY_API_KEY && trigger.message) {
     try {
       const results = await searchWeb(trigger.message)

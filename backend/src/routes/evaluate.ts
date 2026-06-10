@@ -30,7 +30,7 @@ router.post("/", validate(EvaluateRequestSchema), async (req: Request, res: Resp
     // Call Python Eval Service
     const bridgeResp = await pythonEvaluate({
       final_code: finalCode,
-      assessment_type: tenant?.exam.type || "coding",
+      assessment_type: tenant?.exam.type || body.assessmentType || "coding",
       test_cases: tenant?.exam.testCases || [],
       conversation_history: [{ "role": "student", "content": body.conversationHistory }], // simplified
       code_snapshots: body.codeSnapshots,

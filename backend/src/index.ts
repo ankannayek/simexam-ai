@@ -8,6 +8,7 @@ import orgRouter from "./routes/org.js"
 import sessionRouter from "./routes/session.js"
 import authRouter from "./routes/auth.js"
 import uploadRouter from "./routes/upload.js"
+import agentRouter from "./routes/agent.js"
 import { securityHeaders, rateLimiter } from "./middleware/securityMiddleware.js"
 import { hasDatabase, initDatabase } from "./lib/db.js"
 
@@ -56,6 +57,7 @@ app.use("/api/org", orgRouter)
 app.use("/api/session", sessionRouter)
 app.use("/api/auth", authRouter)
 app.use("/api/upload", uploadRouter)
+app.use("/api/agent", agentRouter)
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("[Global Error]", err?.message)

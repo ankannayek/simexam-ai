@@ -36,46 +36,57 @@ SimExam AI is built on a highly decoupled, multi-tenant architecture designed fo
 
 ```mermaid
 graph TD
-    Client[Student Client] -->|SSE / REST| NextJS[Frontend: Next.js/React]
-    NextJS -->|REST API| NodeBackend[Backend: Express.js Orchestrator]
+    Client[Student Client] -->|SSE / REST| Frontend[Frontend: React + Vite]
+    Frontend -->|REST API| NodeBackend[Backend: Express.js Orchestrator]
     
     subgraph Backend Core
         NodeBackend --> IntentRouter[Intent Router]
         IntentRouter --> AgentLoop[Agent Loop]
-        AgentLoop --> ProactiveWatcher[Proactive Watcher]
+        AgentLoop --> SemanticCache[Semantic Cache]
+        SemanticCache --> Embeddings[Gemini Embeddings]
+        SemanticCache <--> DB[(Neon Postgres + pgvector)]
     end
     
-    subgraph External Tools & DB
-        NodeBackend <--> DB[(Neon Postgres)]
+    subgraph External Tools
         IntentRouter <--> Judge0[Judge0 Sandbox]
-        IntentRouter <--> Groq[Groq Llama-3.3]
+        IntentRouter <--> Gemini[Gemini 2.0 Flash]
+        IntentRouter <--> Groq[Groq Llama-3]
     end
     
     subgraph Python Evaluation Swarm
-        NodeBackend -->|Evaluation Payload| FastAPI[Python Eval Service]
+        NodeBackend -->|Evaluation Payload| FastAPI[Python Eval Service: FastAPI]
         FastAPI --> AST[AST Analyser]
+        FastAPI --> GraphEval[Graph Evaluator]
+        FastAPI --> SemanticEval[Semantic Evaluator]
         FastAPI --> Behavioural[Behavioural Scorer]
-        FastAPI --> Semantic[Semantic Evaluator]
         FastAPI <--> pgvector[(pgvector RAG)]
+    end
+    
+    subgraph Document Ingestion
+        NodeBackend -->|Upload| Uploads[File Storage]
+        Uploads -->|Base64| FastAPI
     end
 ```
 
 ### Component Breakdown
 
-1. **Frontend (Next.js/React)**
-   - Implements a fluid UI that shifts based on the assessment type (rendering the `CodeEditor`, `RichTextEditor`, or `WhiteboardCanvas`).
+1. **Frontend (React + Vite)**
+   - Implements a fluid UI that shifts based on the assessment type — rendering the `CodeEditor` (Monaco) for coding, `RichTextEditor` (EasyMDE) for essays, or `WhiteboardCanvas` (tldraw) for system design.
    - Uses Server-Sent Events (SSE) to consume real-time streaming tokens from the LLM, providing a natural conversational flow.
-   - Manages local states like the active terminal, timer, and Socratic hint interactions.
+   - **Proactive Inactivity Detection:** The editor components run a 60-second silence timer. If the candidate stops typing or drawing, it fires a `SILENCE_TIMEOUT` trigger to the backend's `/api/agent` route, prompting the AI to nudge them.
+   - **Document Upload:** Admins can upload PDFs and other knowledge-base files through the configuration panel, which are ingested and embedded for RAG retrieval.
 
 2. **Backend Orchestrator (Node.js/Express)**
    - Acts as the central traffic controller. Handles JWT Authentication, Role-Based Access Control (RBAC), and fetches multi-tenant configurations from the **Neon PostgreSQL** database.
-   - **Intent Router & Agent Loop:** Instead of blindly passing user messages to an LLM, the backend intercepts every message, classifies the intent, and routes it through a specialized tool chain (e.g., executing code via **Judge0**, fetching docs, checking the cache).
-   - **Proactive Watcher:** Runs asynchronously in the background. It monitors session timestamps and code diffs. If the student goes idle or writes stagnant code, it injects proactive web-socket triggers to nudge them.
+   - **Intent Router & Agent Loop:** Instead of blindly passing user messages to an LLM, the backend intercepts every message, classifies the intent, and routes it through a specialized tool chain (e.g., executing code via **Judge0**, fetching docs via RAG, checking the semantic cache).
+   - **Semantic Cache (pgvector):** Before every LLM call, the agent loop generates a 768-dim embedding via Gemini's `text-embedding-004` model and queries the `semantic_cache` table for cosine-similar matches. Cache hits bypass the LLM entirely, reducing both latency and API cost.
+   - **Document Ingestion:** The `/api/upload` route accepts multipart file uploads (PDF, DOCX, TXT, images), validates magic bytes, persists metadata in the `uploaded_docs` table, and forwards the file to the Python service for chunking and embedding.
 
 3. **Evaluation Microservice (Python/FastAPI)**
-   - A specialized AI swarm dedicated purely to analyzing the session once submitted.
-   - **Deterministic Layer:** Uses Python's `ast` module to statically analyze the candidate's final code and compute Big-O algorithmic complexity independently of standard unit tests.
-   - **Semantic Layer:** Employs Claude/Gemini to evaluate conceptual essays or complex system design answers against a strict grading rubric.
+   - A specialized AI swarm dedicated to analyzing the session once submitted. The `Evaluator` class routes to a domain-specific evaluator based on `assessment_type`.
+   - **Deterministic/AST Layer (coding):** Uses Python's `ast` module to statically analyze the candidate's final code and compute Big-O algorithmic complexity independently of standard unit tests.
+   - **Graph Evaluator (system design):** Parses tldraw JSON snapshots, extracting shapes, arrows, labels, and connection patterns. Scores on node count, connectivity ratio, labeling quality, and shape diversity with weighted averages.
+   - **Semantic Evaluator (conceptual):** When a Groq API key is available, uses LangChain with Llama-3 to grade essays against rubric dimensions. Falls back to deterministic heuristics (word count, paragraph structure, keyword matching) when no key is configured.
    - **RAG Engine:** Uses `pgvector` to embed and retrieve technical documentation if the candidate asks deep architectural questions during the exam.
 
 ---
@@ -86,7 +97,7 @@ To run the full multi-service architecture locally, follow the steps below.
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/simexam-ai.git
+git clone https://github.com/Dibyajyoti001/simexam-ai.git
 cd simexam-ai
 ```
 

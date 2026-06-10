@@ -162,6 +162,7 @@ export default function ExamPage() {
       curveballAddressed: examState.examState.curveballAddressed,
       studentName,
       orgSlug,
+      assessmentType: tenant.config?.exam.type || 'coding',
       finalCode: code
     }
 

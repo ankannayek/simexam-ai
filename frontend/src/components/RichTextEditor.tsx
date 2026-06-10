@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
+import { BACKEND_URL } from '../lib/constants'
 import SimpleMdeReact from "react-simplemde-editor"
 import "easymde/dist/easymde.min.css"
 
@@ -14,7 +15,7 @@ export function RichTextEditor({ value, onChange, onSubmit }: RichTextEditorProp
   const resetTimeout = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(() => {
-      fetch('/api/agent', {
+      fetch(`${BACKEND_URL}/api/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'proactive', action: 'SILENCE_TIMEOUT' })

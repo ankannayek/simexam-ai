@@ -7,7 +7,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { fetchTenantConfig, saveTenantConfig } from "../../lib/api"
+import { fetchTenantConfig, saveTenantConfig, uploadFile } from "../../lib/api"
 import { TenantShell } from "../../components/TenantShell"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -626,18 +626,9 @@ export default function AdminConfigPage() {
                   onChange={async (e) => {
                     const file = e.target.files?.[0]
                     if (!file) return
-                    const formData = new FormData()
-                    formData.append("file", file)
                     try {
-                      const res = await fetch("http://localhost:3001/upload", {
-                        method: "POST",
-                        body: formData,
-                      })
-                      if (res.ok) {
-                        setToast({ type: "success", text: "File uploaded successfully" })
-                      } else {
-                        setToast({ type: "error", text: "Upload failed" })
-                      }
+                      await uploadFile(file, config.orgId)
+                      setToast({ type: "success", text: "File uploaded successfully" })
                     } catch (err) {
                       setToast({ type: "error", text: "Upload failed" })
                     }

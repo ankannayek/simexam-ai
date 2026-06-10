@@ -207,3 +207,19 @@ export async function uploadKnowledgeBaseFile(orgSlug: string, file: File, sessi
   if (!response.ok) throw new Error(`Upload failed with status ${response.status}`)
   return response.json()
 }
+
+export async function uploadFile(file: File, orgId: string, sessionId?: string): Promise<{ docId: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('orgId', orgId)
+  if (sessionId) formData.append('sessionId', sessionId)
+  const response = await fetch(`${BACKEND_URL}/api/upload`, { method: 'POST', body: formData })
+  if (!response.ok) throw new Error(`Upload failed with status ${response.status}`)
+  return response.json()
+}
+
+export async function getUploadStatus(docId: string): Promise<{ status: string; chunkCount: number }> {
+  const response = await fetch(`${BACKEND_URL}/api/upload/${docId}/status`)
+  if (!response.ok) throw new Error(`Status check failed with status ${response.status}`)
+  return response.json()
+}

@@ -1,4 +1,5 @@
 import { Tldraw } from '@tldraw/tldraw'
+import { BACKEND_URL } from '../lib/constants'
 import '@tldraw/tldraw/tldraw.css'
 import { useEffect, useRef } from 'react'
 
@@ -13,7 +14,7 @@ export function WhiteboardCanvas({ value, onChange }: WhiteboardCanvasProps) {
   const resetTimeout = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(() => {
-      fetch('/api/agent', {
+      fetch(`${BACKEND_URL}/api/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'proactive', action: 'SILENCE_TIMEOUT' })

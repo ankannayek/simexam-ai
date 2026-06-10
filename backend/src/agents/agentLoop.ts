@@ -5,6 +5,7 @@ import { createSimulatorModel } from "./simulator.js"
 import { withRetry } from "../lib/retryWrapper.js"
 import { buildCAGKey, cagStore } from "../tools/cagTool.js"
 import { SemanticCache } from "../lib/semanticCache.js"
+import { computeEmbedding } from "../lib/embeddings.js"
 import {
   getTenantConfigBySlug,
   hasDatabase,
@@ -60,7 +61,8 @@ export async function runAgentLoop(
 
     if (trigger.type !== "proactive" && trigger.message) {
       try {
-        const cached = await SemanticCache.search(trigger.message, tenantConfig.orgId)
+        const queryEmbedding = await computeEmbedding(trigger.message)
+        const cached = await SemanticCache.search(trigger.message, tenantConfig.orgId, queryEmbedding)
         if (cached) {
           result = {
             resolved: true,
@@ -144,7 +146,8 @@ export async function runAgentLoop(
         
         // Fire-and-forget Semantic Cache store
         if (trigger.message) {
-          SemanticCache.store(trigger.message, result!.content, tenantConfig.orgId).catch((err) =>
+          const storeEmbedding = await computeEmbedding(trigger.message)
+          SemanticCache.store(trigger.message, result!.content, tenantConfig.orgId, storeEmbedding).catch((err) =>
             console.warn("[AgentLoop] SemanticCache store failed:", err?.message)
           )
         }
