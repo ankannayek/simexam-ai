@@ -1,236 +1,177 @@
 "use client"
 
-import { useState } from "react"
 import {
   ArrowRight,
-  Bot,
   Code2,
   LayoutPanelLeft,
   MessageSquareText,
-  TimerReset,
   Sparkles,
-  ShieldCheck,
-  SquareTerminal,
 } from "lucide-react"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
-import { Separator } from "../components/ui/separator"
-import { SESSION_KEYS } from "../lib/constants"
+import { Card, CardContent } from "../components/ui/card"
 import { navigateTo } from "../lib/navigation"
 
-function resetSession() {
-  const keys = [
-    SESSION_KEYS.STUDENT_NAME,
-    SESSION_KEYS.EXAM_STATE,
-    SESSION_KEYS.MESSAGES,
-    SESSION_KEYS.CODE,
-    SESSION_KEYS.TIMER,
-    SESSION_KEYS.RESULTS,
-    SESSION_KEYS.EVALUATION_PAYLOAD,
-    SESSION_KEYS.EVALUATION_PENDING,
-  ]
-
-  for (const key of keys) {
-    sessionStorage.removeItem(key)
-  }
-}
-
 export default function LandingPage() {
-  const [name, setName] = useState("")
-
-  function begin() {
-    const clean = name.trim() || "Candidate"
-    sessionStorage.setItem(SESSION_KEYS.STUDENT_NAME, clean)
-    resetSession()
-    sessionStorage.setItem(SESSION_KEYS.STUDENT_NAME, clean)
-    navigateTo("/exam")
-  }
-
   return (
     <main className="relative min-h-screen overflow-hidden text-zinc-100">
+      {/* Gradient backdrop */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(124,131,255,0.18),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(34,197,94,0.07),transparent_20%),radial-gradient(circle_at_bottom,rgba(15,23,42,0.5),transparent_35%)]" />
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <header className="flex items-center justify-between gap-4">
-          <Badge variant="outline" className="border-white/12 bg-white/[0.03] text-zinc-300">
-            AI-DRIVEN PRACTICAL ASSESSMENTS
-          </Badge>
-          <span className="hidden text-xs text-zinc-500 sm:block">
-            Clean interface • live demo ready • structured scoring
+
+      <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 font-sans">
+        {/* ─── Navigation ─── */}
+        <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-white/5 bg-surface/80 px-0 py-4 backdrop-blur-md">
+          <span className="text-lg font-semibold tracking-tight text-zinc-50">
+            SimExam
           </span>
-        </header>
+          <div className="flex items-center gap-5">
+            <a
+              href="#how-it-works"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-100"
+            >
+              About
+            </a>
+            <a
+              href="/login"
+              onClick={(e) => {
+                e.preventDefault()
+                navigateTo("/login")
+              }}
+              className="text-sm font-medium text-zinc-200 transition-colors hover:text-white"
+            >
+              Sign in&nbsp;&rarr;
+            </a>
+          </div>
+        </nav>
 
-        <section className="flex flex-1 items-center py-10 lg:py-14">
-          <div className="grid w-full gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
-            <div className="space-y-8">
-              <div className="max-w-2xl space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-indigo-200">
-                  <Sparkles size={13} />
-                  LIVE CANDIDATE SIMULATION
-                </div>
+        {/* ─── Hero ─── */}
+        <section className="flex flex-1 flex-col items-center justify-center py-24 text-center sm:py-32 lg:py-36">
+          <Badge className="mb-6 animate-fade-in">
+            <Sparkles size={13} className="mr-1.5" />
+            AI-Powered Assessment Platform
+          </Badge>
 
-                <div className="space-y-4">
-                  <h1 className="max-w-xl text-5xl font-semibold tracking-[-0.06em] text-zinc-50 sm:text-6xl lg:text-7xl">
-                    SimExam.ai
-                  </h1>
-                  <p className="max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
-                    A focused assessment environment that tests debugging, reasoning, and adaptation under changing
-                    constraints. One task. One interviewer. One structured evaluation.
-                  </p>
-                </div>
-              </div>
+          <h1 className="mx-auto max-w-3xl animate-fade-up text-4xl font-semibold leading-[1.1] tracking-tight text-zinc-50 sm:text-5xl lg:text-6xl">
+            Assessments that think&nbsp;with&nbsp;you.
+          </h1>
 
-              <Card className="overflow-hidden border-white/10 bg-white/[0.03]">
-                <CardHeader>
-                  <CardTitle className="text-xl sm:text-2xl">Begin assessment</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <p className="max-w-xl text-sm leading-6 text-zinc-400">
-                    You will enter a coding session with a broken module, a live mentor, a terminal, and a timed
-                    constraint shift. The interface stays calm; the problem gets harder.
-                  </p>
+          <p className="mx-auto mt-6 max-w-2xl animate-fade-up text-base leading-relaxed text-zinc-400 sm:text-lg" style={{ animationDelay: "0.1s", animationFillMode: "both" }}>
+            SimExam uses autonomous AI agents to create fluid, multi-modal
+            assessments — from live coding to system design to conceptual
+            essays. No static tests. No multiple choice.
+          </p>
 
-                  <form
-                    className="space-y-3"
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      begin()
-                    }}
-                  >
-                    <label className="block text-[11px] font-medium tracking-[0.16em] text-zinc-500">
-                      STUDENT NAME
-                    </label>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your name"
-                      autoFocus
-                      className="w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-4 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/20"
-                    />
-
-                    <Button type="submit" className="h-12 w-full rounded-2xl text-sm">
-                      Begin assessment <ArrowRight size={16} />
-                    </Button>
-                  </form>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
-                      Press Enter to start
-                    </span>
-                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
-                      Session resets cleanly
-                    </span>
-                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1">
-                      No clutter on this screen
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  {
-                    icon: Code2,
-                    title: "Code editor",
-                    desc: "Broken code to inspect, fix, and improve.",
-                  },
-                  {
-                    icon: MessageSquareText,
-                    title: "AI interviewer",
-                    desc: "A guided conversation that reacts to your answers.",
-                  },
-                  {
-                    icon: SquareTerminal,
-                    title: "Terminal output",
-                    desc: "Immediate feedback from running the code.",
-                  },
-                ].map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <Card key={item.title} className="border-white/8 bg-white/[0.025]">
-                      <CardContent className="space-y-3 p-5">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-indigo-200">
-                          <Icon size={18} />
-                        </div>
-                        <div className="space-y-1">
-                          <h3 className="text-sm font-semibold text-zinc-100">{item.title}</h3>
-                          <p className="text-sm leading-6 text-zinc-500">{item.desc}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Card className="border-white/10 bg-white/[0.035]">
-                <CardHeader className="space-y-3">
-                  <Badge variant="outline" className="w-fit border-white/10 bg-white/[0.03]">
-                    WHAT THE CANDIDATE SEES
-                  </Badge>
-                  <CardTitle className="text-xl sm:text-2xl">A professional coding-session flow</CardTitle>
-                  <p className="max-w-xl text-sm leading-6 text-zinc-400">
-                    The UI should feel like a serious assessment tool, not a toy dashboard. The hierarchy stays clean
-                    and the story stays readable.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    {
-                      icon: LayoutPanelLeft,
-                      title: "Clear workspace",
-                      desc: "Code on one side, conversation on the other, terminal below.",
-                    },
-                    {
-                      icon: Bot,
-                      title: "Real conversation",
-                      desc: "The mentor responds to help requests and code changes.",
-                    },
-                    {
-                      icon: TimerReset,
-                      title: "Timed pressure",
-                      desc: "A clean constraint shift appears mid-session without visual noise.",
-                    },
-                    {
-                      icon: ShieldCheck,
-                      title: "Structured evaluation",
-                      desc: "A concise report summarizes technical accuracy and adaptability.",
-                    },
-                  ].map((item, index) => {
-                    const Icon = item.icon
-                    return (
-                      <div key={item.title}>
-                        <div className="flex items-start gap-4 rounded-2xl border border-white/8 bg-zinc-950/55 px-4 py-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-indigo-200">
-                            <Icon size={16} />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-zinc-100">{item.title}</p>
-                            <p className="text-sm leading-6 text-zinc-500">{item.desc}</p>
-                          </div>
-                        </div>
-                        {index < 3 && <Separator className="my-3 bg-white/8" />}
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-
-              <Card className="border-indigo-500/15 bg-gradient-to-br from-indigo-500/8 via-white/[0.03] to-transparent">
-                <CardContent className="space-y-3 p-5">
-                  <div className="text-[11px] font-medium tracking-[0.16em] text-zinc-500">
-                    PRODUCT PRINCIPLE
-                  </div>
-                  <p className="text-sm leading-7 text-zinc-300">
-                    Public UI stays minimal and serious. Internal AI routing, evaluation details, and debug state live
-                    behind the scenes.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: "0.2s", animationFillMode: "both" }}>
+            <Button
+              className="h-12 rounded-xl px-6 py-3 text-sm"
+              onClick={() => navigateTo("/login")}
+            >
+              Get Started <ArrowRight size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 rounded-xl px-6 py-3 text-sm"
+              onClick={() => {
+                document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
+              }}
+            >
+              See how it works
+            </Button>
           </div>
         </section>
+
+        {/* ─── Features ─── */}
+        <section className="py-20 sm:py-24">
+          <h2 className="mb-12 text-center text-2xl font-semibold tracking-tight text-zinc-50">
+            Built for real assessment
+          </h2>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            {[
+              {
+                icon: Code2,
+                title: "Live Coding",
+                desc: "Debug real code with an AI mentor that guides through Socratic questioning.",
+              },
+              {
+                icon: LayoutPanelLeft,
+                title: "System Design",
+                desc: "Draw architectures on a whiteboard while the AI probes scalability and trade-offs.",
+              },
+              {
+                icon: MessageSquareText,
+                title: "Conceptual Essays",
+                desc: "Write structured responses evaluated by a multi-layer AI grading swarm.",
+              },
+            ].map((item) => {
+              const Icon = item.icon
+              return (
+                <Card
+                  key={item.title}
+                  className="border-white/[0.08] bg-surface-raised p-6 transition-colors duration-200 hover:border-accent/30"
+                >
+                  <CardContent className="space-y-4 p-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-accent">
+                      <Icon size={20} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h3 className="text-base font-semibold text-zinc-100">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-zinc-400">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ─── How It Works ─── */}
+        <section id="how-it-works" className="py-20 sm:py-24">
+          <h2 className="mb-14 text-center text-2xl font-semibold tracking-tight text-zinc-50">
+            Three steps. Zero friction.
+          </h2>
+
+          <div className="grid gap-10 sm:grid-cols-3 sm:gap-8">
+            {[
+              {
+                num: "1",
+                title: "Configure",
+                desc: "Admins set up the assessment type, upload knowledge bases, and define rubrics.",
+              },
+              {
+                num: "2",
+                title: "Assess",
+                desc: "Students enter the fluid workspace. The AI adapts in real-time.",
+              },
+              {
+                num: "3",
+                title: "Evaluate",
+                desc: "A multi-agent swarm scores technical accuracy, adaptability, and communication.",
+              },
+            ].map((step) => (
+              <div key={step.num} className="flex flex-col items-center text-center sm:items-start sm:text-left">
+                <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border border-accent/20 text-sm font-semibold text-accent">
+                  {step.num}
+                </div>
+                <h3 className="mb-2 text-base font-semibold text-zinc-100">
+                  {step.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Footer ─── */}
+        <footer className="border-t border-white/5 py-8 text-center text-sm text-zinc-500">
+          SimExam AI — Reimagining assessments.
+        </footer>
       </div>
     </main>
   )

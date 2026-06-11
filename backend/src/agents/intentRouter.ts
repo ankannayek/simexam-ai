@@ -306,26 +306,10 @@ export async function routeIntent(
     intent = classifyIntent(trigger.message || "")
   }
 
-  const assessmentType = context.tenantConfig?.exam?.type || "coding"
+  const assessmentType = trigger.assessmentType || context.tenantConfig?.exam?.type || "coding"
   console.log(`[IntentRouter] Intent: ${intent} | Domain: ${assessmentType} | Session: ${trigger.sessionId}`)
 
-  // Domain-aware routing logic
-  if ((assessmentType === "system_design" || assessmentType === "conceptual") && intent !== "CODE_PASTE") {
-    try {
-      const extraContext = `[ASSESSMENT_TYPE] This is a ${assessmentType} assessment. Adjust your persona to focus on ${
-        assessmentType === "system_design" ? "architecture, scalability, and design patterns" : "theoretical concepts and written explanations"
-      } rather than code syntax.`;
-      const response = await callSimulatorLLM(trigger, context, extraContext);
-      return { resolved: true, source: "llm", content: response };
-    } catch (err: any) {
-      console.error(`[IntentRouter] Domain handler failed:`, err?.message)
-      return {
-        resolved: false,
-        source: "llm",
-        content: "I'm having a bit of trouble right now. Can you try that again in a moment?",
-      }
-    }
-  }
+
 
   const handler = HANDLER_MAP[intent]
   if (!handler) {
@@ -363,6 +347,19 @@ async function callSimulatorLLM(
 
   // Build messages with optional extra context
   let messages = [...context.messages]
+  
+  // Inject domain context globally so all handlers (RAG, Web Search) maintain persona
+  const assessmentType = trigger.assessmentType || context.tenantConfig?.exam?.type || "coding"
+  if (assessmentType !== "coding") {
+    const domainContext = `[ASSESSMENT_TYPE] This is a ${assessmentType} assessment. Adjust your persona to focus on ${
+      assessmentType === "system_design" ? "architecture, scalability, and design patterns" : "theoretical concepts and written explanations"
+    } rather than code syntax.`
+    messages.push({
+      role: "user",
+      parts: [{ text: `[SYSTEM_STATE]\n${domainContext}` }],
+    })
+  }
+
   if (extraContext) {
     messages.push({
       role: "user",

@@ -13,7 +13,7 @@ export async function streamChat(
   messages: GeminiMessage[],
   studentName: string,
   examState: ExamState,
-  options: { sessionId?: string; orgSlug?: string },
+  options: { sessionId?: string; orgSlug?: string; assessmentType?: string },
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (message: string) => void
@@ -32,6 +32,7 @@ export async function streamChat(
         examState,
         sessionId: options.sessionId,
         orgSlug: options.orgSlug,
+        assessmentType: options.assessmentType,
       }),
     })
   } catch {

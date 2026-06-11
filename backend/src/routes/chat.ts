@@ -11,7 +11,7 @@ const router = Router()
  * POST /api/chat
  */
 router.post("/", validate(ChatRequestSchema), async (req: Request, res: Response) => {
-  const { messages, studentName, examState, sessionId, orgSlug } = req.body
+  const { messages, studentName, examState, sessionId, orgSlug, assessmentType } = req.body
 
   if (!messages || !studentName) {
     return res.status(400).json({ error: "messages and studentName are required" })
@@ -71,7 +71,8 @@ router.post("/", validate(ChatRequestSchema), async (req: Request, res: Response
       message: lastMessage,
       code: codeMatch,
       examState: examState || createInitialExamState(),
-      tenantConfig
+      tenantConfig,
+      assessmentType
     }
 
     const streamCallback = (chunk: string) => {

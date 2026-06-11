@@ -144,10 +144,14 @@ CREATE TABLE IF NOT EXISTS org_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   auth_user_id TEXT UNIQUE NOT NULL,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'admin',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CHECK (role IN ('admin', 'viewer'))
+  CHECK (role IN ('admin', 'viewer', 'student'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_org_users_email ON org_users(email);
 `
 
 let pool: pg.Pool | null = null

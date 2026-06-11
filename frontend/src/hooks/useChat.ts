@@ -50,6 +50,7 @@ export function useChat(studentName: string, options: {
   sessionId?: string
   orgSlug?: string
   tenant?: TenantConfig | null
+  assessmentType?: string
 } = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(studentName, options.tenant))
   const [isTyping, setIsTyping] = useState(false)
@@ -127,7 +128,7 @@ export function useChat(studentName: string, options: {
         geminiHistory,
         studentName,
         examState,
-        { sessionId: options.sessionId, orgSlug: options.orgSlug },
+        { sessionId: options.sessionId, orgSlug: options.orgSlug, assessmentType: options.assessmentType },
         (chunk) => {
           setMessages((prev) =>
             prev.map((message) =>

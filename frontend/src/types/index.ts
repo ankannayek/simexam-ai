@@ -35,12 +35,15 @@ export interface GeminiMessage {
   parts: Array<{ text: string }>
 }
 
+export type AssessmentType = "coding" | "conceptual" | "system_design" | "multiple_choice"
+
 export interface ChatRequestBody {
   messages: GeminiMessage[]
   studentName: string
   examState?: ExamState
   sessionId?: string
   orgSlug?: string
+  assessmentType?: AssessmentType
 }
 
 export interface RubricDimension {

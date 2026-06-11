@@ -177,6 +177,7 @@ export interface AgentTrigger {
   examState: ExamState
   tenantConfig: TenantConfig
   proactiveAction?: ProactiveActionType
+  assessmentType?: AssessmentType
 }
 
 export interface ToolResult {
