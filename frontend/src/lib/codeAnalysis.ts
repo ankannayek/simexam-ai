@@ -81,56 +81,14 @@ export function classifyIntent(message: string): IntentClass {
 export function deriveCodeState(code: string): CodeState {
   const text = compact(code)
 
-  if (!text || text.length < 20) {
-    return "UNKNOWN"
+  if (!text || text.length < 5) {
+    return "INITIAL"
   }
 
-  if (text.includes(".sort(") && !text.includes("merge") && !text.includes("quick")) {
-    return "BUILT_IN_SORT"
-  }
-
-  if (
-    text.includes("merge") &&
-    text.includes("slice") &&
-    text.includes("math.floor")
-  ) {
-    return "FIXED_FAST"
-  }
-
-  if (
-    text.includes("quick") &&
-    (text.includes("pivot") || text.includes("partition") || text.includes("left") || text.includes("right"))
-  ) {
-    return "FIXED_FAST"
-  }
-
-  if (
-    text.includes("n - i - 1") ||
-    text.includes("n-i-1")
-  ) {
-    return "FIXED_SLOW"
-  }
-
-  if (
-    text.includes("j < n - i;") ||
-    text.includes("j < n-i;")
-  ) {
-    return "BUGGY_ORIGINAL"
-  }
-
-  return "UNKNOWN"
+  return "COMPILING"
 }
 
-export function deriveApproach(codeState: CodeState): "bubble" | "merge" | "quicksort" | "unknown" {
-  switch (codeState) {
-    case "BUGGY_ORIGINAL":
-    case "FIXED_SLOW":
-      return "bubble"
-    case "FIXED_FAST":
-      return "merge"
-    case "BUILT_IN_SORT":
-      return "quicksort"
-    default:
-      return "unknown"
-  }
+export function deriveApproach(codeState: CodeState): string {
+  if (codeState === "INITIAL") return "unknown"
+  return "in-progress"
 }

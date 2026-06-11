@@ -235,7 +235,6 @@ export default function AdminDashboardPage() {
                       <td className="px-5 py-3">
                         <Button
                           variant="ghost"
-                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
                             navigate(`/${orgSlug}/admin/session/${session.id}`)

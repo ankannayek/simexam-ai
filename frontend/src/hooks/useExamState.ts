@@ -10,7 +10,7 @@ const INITIAL_STATE: ExamState = {
   curveballAddressed: false,
   hintsGiven: 0,
   turnsElapsed: 0,
-  lastCodeState: "BUGGY_ORIGINAL",
+  lastCodeState: "INITIAL",
   lastIntentClass: "NOVEL_INPUT",
 }
 
@@ -44,14 +44,14 @@ export function useExamState() {
 
     setExamState((prev) => {
       const seen = prev.curveballSeen || curveballSeen
-      const fixedFast = codeState === "FIXED_FAST"
+      const isOptimized = codeState === "OPTIMIZED"
 
       return {
         ...prev,
-        bugFixed: codeState === "FIXED_SLOW" || codeState === "FIXED_FAST",
+        bugFixed: prev.bugFixed || isOptimized,
         approach,
         curveballSeen: seen,
-        curveballAddressed: prev.curveballAddressed || (fixedFast && seen),
+        curveballAddressed: prev.curveballAddressed || (isOptimized && seen),
         lastCodeState: codeState,
       }
     })

@@ -6,18 +6,23 @@ type MemoryEntry = {
 }
 
 const memoryCache = new Map<string, MemoryEntry>()
-let redis: Redis | null = null
+let redisClient: any = null
 
-function getRedis(): Redis | null {
-  if (!process.env.REDIS_URL) return null
-  if (!redis) {
-    redis = new Redis(process.env.REDIS_URL, {
+if (process.env.REDIS_URL) {
+  try {
+    // @ts-ignore
+    redisClient = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 1,
       enableReadyCheck: false,
     })
-    redis.on("error", (err) => console.warn("[Redis] Cache disabled:", err.message))
+    redisClient.on("error", (err: any) => console.warn("[Redis] Cache disabled:", err.message))
+  } catch (err) {
+    console.warn("[Redis] Could not connect:", err)
   }
-  return redis
+}
+
+function getRedis(): any {
+  return redisClient
 }
 
 export async function cacheGet<T>(key: string): Promise<T | null> {

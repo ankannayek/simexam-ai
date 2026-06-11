@@ -110,10 +110,19 @@ export default function AdminConfigPage() {
 
   const update = useCallback(
     <K extends keyof TenantConfig>(section: K, partial: Partial<TenantConfig[K]>) => {
-      setConfig((prev) => ({
-        ...prev,
-        [section]: { ...prev[section], ...partial },
-      }))
+      setConfig((prev) => {
+        const currentSection = prev[section]
+        if (typeof currentSection === "object" && currentSection !== null) {
+          return {
+            ...prev,
+            [section]: { ...currentSection, ...partial },
+          }
+        }
+        return {
+          ...prev,
+          [section]: partial as any,
+        }
+      })
     },
     []
   )

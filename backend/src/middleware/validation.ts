@@ -21,15 +21,14 @@ export const ChatRequestSchema = z.object({
     )
     .max(50),
   studentName: safeName,
-  examState: z
-    .object({
+  examState: z.object({
       bugFixed: z.boolean(),
-      approach: z.enum(["bubble", "merge", "quicksort", "unknown"]),
+      approach: z.string(),
       curveballSeen: z.boolean(),
       curveballAddressed: z.boolean(),
-      hintsGiven: z.number().int().min(0),
-      turnsElapsed: z.number().int().min(0),
-      lastCodeState: z.enum(["BUGGY_ORIGINAL", "FIXED_SLOW", "FIXED_FAST", "BUILT_IN_SORT", "UNKNOWN"]),
+      hintsGiven: z.number(),
+      turnsElapsed: z.number(),
+      lastCodeState: z.enum(["INITIAL", "COMPILING", "SYNTAX_ERROR", "LOGIC_ERROR", "OPTIMIZED", "UNKNOWN"]),
       lastIntentClass: z.string(),
     })
     .optional(),

@@ -13,15 +13,16 @@ export type IntentClass =
   | "NOVEL_INPUT"
 
 export type CodeState =
-  | "BUGGY_ORIGINAL"
-  | "FIXED_SLOW"
-  | "FIXED_FAST"
-  | "BUILT_IN_SORT"
+  | "INITIAL"
+  | "COMPILING"
+  | "SYNTAX_ERROR"
+  | "LOGIC_ERROR"
+  | "OPTIMIZED"
   | "UNKNOWN"
 
 export interface ExamState {
   bugFixed: boolean
-  approach: "bubble" | "merge" | "quicksort" | "unknown"
+  approach: string
   curveballSeen: boolean
   curveballAddressed: boolean
   hintsGiven: number

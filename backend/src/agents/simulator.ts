@@ -48,12 +48,17 @@ export function createSimulatorModel(apiKey: string, studentName: string, tenant
   const systemInstruction = buildSimulatorSystemPrompt(studentName, tenant)
 
   return {
-    generateContent: async ({ contents }: { contents: string }) => {
-      // IntentRouter passes the compressed context as a single string `contents`
+    generateContent: async ({ contents }: { contents: any[] }) => {
+      // Map GeminiMessage to Groq message format
+      const groqMessages = contents.map((m: any) => ({
+        role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+        content: m.parts.map((p: any) => p.text).join("\n")
+      }))
+
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: "system", content: systemInstruction },
-          { role: "user", content: contents }
+          ...groqMessages
         ],
         model: "llama-3.3-70b-versatile",
         temperature: 0.75,

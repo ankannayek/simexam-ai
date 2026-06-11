@@ -9,21 +9,12 @@ import {
 } from "react"
 import {
   getToken,
-  setToken,
-  clearToken,
-  parseToken,
-  isTokenExpired,
-  type JWTPayload,
+  getUser,
+  logout as authLogout,
+  loginUser,
+  registerUser,
+  AuthUser,
 } from "../lib/auth"
-import { loginAdmin, registerAdmin } from "../lib/api"
-
-interface AuthUser {
-  sub: string
-  email: string
-  orgSlug?: string
-  orgId?: string
-  role?: "admin" | "student"
-}
 
 interface AuthContextValue {
   user: AuthUser | null
@@ -37,57 +28,40 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function payloadToUser(payload: JWTPayload): AuthUser {
-  return {
-    sub: payload.sub,
-    email: payload.email,
-    orgSlug: payload.orgSlug,
-    orgId: payload.orgId,
-    role: payload.role,
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setTokenState] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const stored = getToken()
-    if (stored && !isTokenExpired(stored)) {
-      try {
-        setUser(payloadToUser(parseToken(stored)))
-        setTokenState(stored)
-      } catch {
-        clearToken()
-      }
+    const storedToken = getToken()
+    const storedUser = getUser()
+    if (storedToken && storedUser) {
+      setUser(storedUser)
+      setTokenState(storedToken)
     }
     setIsLoading(false)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await loginAdmin(email, password)
-    setToken(result.token)
-    setTokenState(result.token)
-    const payload = parseToken(result.token)
-    setUser(payloadToUser(payload))
-    return { orgSlug: payload.orgSlug }
+    const resultUser = await loginUser(email, password)
+    setUser(resultUser)
+    setTokenState(getToken())
+    return { orgSlug: resultUser.orgSlug }
   }, [])
 
   const register = useCallback(
     async (email: string, password: string, orgSlug: string, orgName: string) => {
-      const result = await registerAdmin(email, password, orgSlug, orgName)
-      setToken(result.token)
-      setTokenState(result.token)
-      const payload = parseToken(result.token)
-      setUser(payloadToUser(payload))
-      return { orgSlug: payload.orgSlug ?? orgSlug }
+      const resultUser = await registerUser(email, password, orgSlug, orgName)
+      setUser(resultUser)
+      setTokenState(getToken())
+      return { orgSlug: resultUser.orgSlug }
     },
     []
   )
 
   const logout = useCallback(() => {
-    clearToken()
+    authLogout()
     setTokenState(null)
     setUser(null)
   }, [])

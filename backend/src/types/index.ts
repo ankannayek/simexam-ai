@@ -11,15 +11,16 @@ export type IntentClass =
   | "NOVEL_INPUT"
 
 export type CodeState =
-  | "BUGGY_ORIGINAL"
-  | "FIXED_SLOW"
-  | "FIXED_FAST"
-  | "BUILT_IN_SORT"
+  | "INITIAL"
+  | "COMPILING"
+  | "SYNTAX_ERROR"
+  | "LOGIC_ERROR"
+  | "OPTIMIZED"
   | "UNKNOWN"
 
 export interface ExamState {
   bugFixed: boolean
-  approach: "bubble" | "merge" | "quicksort" | "unknown"
+  approach: string
   curveballSeen: boolean
   curveballAddressed: boolean
   hintsGiven: number
@@ -125,6 +126,7 @@ export interface EvaluateRequestBody {
   studentName: string
   sessionId?: string
   orgSlug?: string
+  assessmentType?: AssessmentType
 }
 
 export interface EvaluationResult {
@@ -182,7 +184,7 @@ export interface AgentTrigger {
 
 export interface ToolResult {
   resolved: boolean
-  source: 'cag' | 'cag_static' | 'sandbox' | 'rag' | 'web_search' | 'doc_fetch' | 'llm'
+  source: 'cag' | 'cag_static' | 'sandbox' | 'rag' | 'web_search' | 'doc_fetch' | 'llm' | 'cache'
   content: string
   metadata?: Record<string, unknown>
 }

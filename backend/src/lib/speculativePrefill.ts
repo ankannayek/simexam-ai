@@ -8,9 +8,9 @@ import { TenantConfig, GeminiMessage, ExamState, IntentClass } from "../types/in
 // ── Predicted first-turn intents ──────────────────────────────────
 
 const PREFILL_INTENTS: Array<{ intent: IntentClass; codeState: string }> = [
-  { intent: "HINT_REQUEST", codeState: "BUGGY_ORIGINAL" },
-  { intent: "CONCEPT_QUESTION", codeState: "BUGGY_ORIGINAL" },
-  { intent: "DONE_SIGNAL", codeState: "BUGGY_ORIGINAL" },
+  { intent: "HINT_REQUEST", codeState: "INITIAL" },
+  { intent: "CONCEPT_QUESTION", codeState: "INITIAL" },
+  { intent: "DONE_SIGNAL", codeState: "INITIAL" },
 ]
 
 /**

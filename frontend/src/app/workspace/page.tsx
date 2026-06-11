@@ -45,10 +45,10 @@ export default function WorkspacePage() {
   
   // Determine mode dynamically
   const activeMode = useMemo(() => {
-    if (hubIntent === "exam") return tenant.config?.exam.type || "coding"
     if (intakeFocus === "System Architecture") return "system_design"
     if (intakeFocus === "Backend & APIs" || intakeFocus === "Frontend & UI") return "coding"
-    return "conceptual"
+    if (intakeFocus === "Product Management" || intakeFocus === "Theoretical") return "conceptual"
+    return "coding"
   }, [hubIntent, intakeFocus, tenant.config])
 
   const [code, setCode] = useState(() => {
@@ -72,8 +72,8 @@ export default function WorkspacePage() {
   const agentStatus = useAgentStatus()
 
   const { secondsLeft, curveballFired } = useExamTimer({
-    initialDuration: tenant.config?.exam.timeLimitSeconds || 3600,
-    curveballAt: tenant.config?.exam.curveballAtSeconds || 1800,
+    durationSeconds: tenant.config?.exam.timeLimitSeconds || 3600,
+    curveballAtSeconds: tenant.config?.exam.curveballAtSeconds || 1800,
     onCurveball: () => {
       chat.injectCurveball()
       examState.markCurveballSeen()

@@ -34,7 +34,11 @@ export function WhiteboardCanvas({ value, onChange }: WhiteboardCanvasProps) {
       <Tldraw
         onMount={(editor) => {
           editor.store.listen(() => {
-            const snapshot = editor.store.getSnapshot()
+            const snapshot = (editor.store as any).getSnapshot
+              ? (editor.store as any).getSnapshot()
+              : (editor as any).getSnapshot
+              ? (editor as any).getSnapshot()
+              : {}
             onChange(JSON.stringify(snapshot))
             resetTimeout()
           }, { source: 'user', scope: 'document' })
