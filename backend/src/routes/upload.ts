@@ -100,7 +100,6 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
 
   const { orgId, sessionId } = req.body
   const resolvedUploadDir = path.resolve(uploadDir)
-  const safeFilePath = path.resolve(req.file.path)
 
   let realUploadDir: string
   let realSafeFilePath: string | null = null
@@ -110,9 +109,12 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
     return res.status(500).json({ error: "Upload directory is not accessible" })
   }
 
-  if (fs.existsSync(safeFilePath)) {
+  const safeFilename = path.basename(req.file.path)
+  const candidateFilePath = path.join(realUploadDir, safeFilename)
+
+  if (fs.existsSync(candidateFilePath)) {
     try {
-      realSafeFilePath = fs.realpathSync(safeFilePath)
+      realSafeFilePath = fs.realpathSync(candidateFilePath)
     } catch {}
   }
 
