@@ -102,10 +102,30 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
   const resolvedUploadDir = path.resolve(uploadDir)
   const safeFilePath = path.resolve(req.file.path)
 
-  if (!safeFilePath.startsWith(resolvedUploadDir + path.sep)) {
+  let realUploadDir: string
+  let realSafeFilePath: string | null = null
+  try {
+    realUploadDir = fs.realpathSync(resolvedUploadDir)
+  } catch {
+    return res.status(500).json({ error: "Upload directory is not accessible" })
+  }
+
+  if (fs.existsSync(safeFilePath)) {
     try {
-      if (fs.existsSync(safeFilePath)) {
-        fs.unlinkSync(safeFilePath)
+      realSafeFilePath = fs.realpathSync(safeFilePath)
+    } catch {}
+  }
+
+  const isWithinUploadDir = (() => {
+    if (!realSafeFilePath) return false
+    const relativePath = path.relative(realUploadDir, realSafeFilePath)
+    return relativePath !== "" && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)
+  })()
+
+  if (!isWithinUploadDir) {
+    try {
+      if (realSafeFilePath && fs.existsSync(realSafeFilePath)) {
+        fs.unlinkSync(realSafeFilePath)
       }
     } catch {}
     return res.status(400).json({ error: "Invalid upload path" })
