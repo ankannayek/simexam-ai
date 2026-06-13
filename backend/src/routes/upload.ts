@@ -2,12 +2,29 @@ import { Router, Request, Response } from "express"
 import multer from "multer"
 import path from "path"
 import fs from "fs"
+import rateLimit from "express-rate-limit"
 import { validate, UploadSchema } from "../middleware/validation.js"
 import { authenticateJWT, requireAdmin } from "../middleware/authMiddleware.js"
 import { hasDatabase, dbQuery } from "../lib/db.js"
 import { pythonIngest } from "../tools/pythonBridge.js"
 
 const router = Router()
+
+const uploadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many upload requests, please try again later." },
+})
+
+const statusRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many status requests, please try again later." },
+})
 
 // Configure multer storage
 const uploadDir = path.join(process.cwd(), "uploads")
@@ -76,7 +93,7 @@ function validateMagicBytes(filePath: string, mimetype: string): boolean {
  * POST /api/upload
  * Requires JWT token, orgId in body.
  */
-router.post("/", authenticateJWT, upload.single("file"), validate(UploadSchema), async (req: Request, res: Response) => {
+router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), validate(UploadSchema), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" })
   }
@@ -137,7 +154,7 @@ router.post("/", authenticateJWT, upload.single("file"), validate(UploadSchema),
 /**
  * GET /api/upload/:docId/status
  */
-router.get("/:docId/status", authenticateJWT, async (req: Request, res: Response) => {
+router.get("/:docId/status", statusRateLimiter, authenticateJWT, async (req: Request, res: Response) => {
   const { docId } = req.params
 
   if (!hasDatabase()) {
