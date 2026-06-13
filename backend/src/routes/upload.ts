@@ -119,7 +119,7 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
   const isWithinUploadDir = (() => {
     if (!realSafeFilePath) return false
     const relativePath = path.relative(realUploadDir, realSafeFilePath)
-    return relativePath !== "" && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)
+    return !relativePath.startsWith("..") && !path.isAbsolute(relativePath)
   })()
 
   if (!isWithinUploadDir) {
@@ -131,13 +131,15 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
     return res.status(400).json({ error: "Invalid upload path" })
   }
 
+  const verifiedFilePath = realSafeFilePath as string
+
   if (process.env.ENABLE_AUTH && req.user && req.user.role !== "admin" && req.user.orgId !== orgId) {
-    fs.unlinkSync(safeFilePath)
+    fs.unlinkSync(verifiedFilePath)
     return res.status(403).json({ error: "Unauthorized for this organization" })
   }
 
-  if (!validateMagicBytes(safeFilePath, req.file.mimetype)) {
-    fs.unlinkSync(safeFilePath)
+  if (!validateMagicBytes(verifiedFilePath, req.file.mimetype)) {
+    fs.unlinkSync(verifiedFilePath)
     return res.status(400).json({ error: "File content does not match extension" })
   }
 
@@ -148,13 +150,13 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
       const result = await dbQuery<{ id: string }>(
         `INSERT INTO uploaded_docs (org_id, session_id, filename, mime_type, size_bytes, storage_url, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'processing') RETURNING id`,
-        [orgId, sessionId || null, req.file.originalname, req.file.mimetype, req.file.size, safeFilePath]
+        [orgId, sessionId || null, req.file.originalname, req.file.mimetype, req.file.size, verifiedFilePath]
       )
       docId = result.rows[0].id
     }
 
     // Read file buffer for Python ingestion
-    const fileBuffer = fs.readFileSync(safeFilePath)
+    const fileBuffer = fs.readFileSync(verifiedFilePath)
     
     // Fire-and-forget
     pythonIngest(docId, orgId, fileBuffer, req.file.originalname, req.file.mimetype).catch((err) => {
