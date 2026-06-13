@@ -55,7 +55,8 @@ class ASTAnalyser:
             func_defs = re.findall(r'function\s+(\w+)\s*\(|const\s+(\w+)\s*=\s*\(|let\s+(\w+)\s*=\s*\(', code)
             names = [m[0] or m[1] or m[2] for m in func_defs]
             for name in names:
-                if re.search(rf'{name}\s*\(', code) and code.count(f'{name}(') > 1:
+                safe_name = re.escape(name)
+                if re.search(rf'{safe_name}\s*\(', code) and code.count(f'{name}(') > 1:
                     return True
         return False
 
