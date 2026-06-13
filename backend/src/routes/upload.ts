@@ -104,8 +104,8 @@ router.post("/", uploadRateLimiter, authenticateJWT, upload.single("file"), vali
 
   if (!safeFilePath.startsWith(resolvedUploadDir + path.sep)) {
     try {
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path)
+      if (fs.existsSync(safeFilePath)) {
+        fs.unlinkSync(safeFilePath)
       }
     } catch {}
     return res.status(400).json({ error: "Invalid upload path" })
