@@ -162,8 +162,8 @@ export function validate(schema: ZodSchema) {
  */
 export function sanitizeString(input: string): string {
   return input
-    // Strip HTML tags
-    .replace(/<[^>]*>/g, "")
+    // Strip angle brackets to prevent HTML tag injection
+    .replace(/[<>]/g, "")
     // Strip null bytes
     .replace(/\0/g, "")
     // Strip control characters (except newline, tab, carriage return)
