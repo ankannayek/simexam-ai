@@ -320,7 +320,7 @@ export async function routeIntent(
   try {
     return await handler(trigger, context)
   } catch (err: any) {
-    console.error(`[IntentRouter] Handler ${intent} failed:`, err?.message)
+    console.error("[IntentRouter] Handler %s failed: %s", intent, err?.message)
     // Fall back to generic LLM
     try {
       const fallback = await callSimulatorLLM(trigger, context)
