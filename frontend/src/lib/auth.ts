@@ -12,7 +12,24 @@ export interface AuthUser {
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (!token) return null
+
+  try {
+    const payloadBase64 = token.split('.')[1]
+    if (!payloadBase64) return token // Not a valid JWT, let backend reject it
+    
+    const payload = JSON.parse(atob(payloadBase64))
+    if (payload.exp && Date.now() / 1000 > payload.exp) {
+      console.warn('[Auth] Token expired, logging out')
+      logout()
+      return null
+    }
+  } catch (err) {
+    // Ignore parsing errors, let backend handle invalid tokens
+  }
+
+  return token
 }
 
 export function getUser(): AuthUser | null {
