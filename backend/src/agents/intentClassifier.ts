@@ -31,8 +31,8 @@ export function classifyIntent(message: string): IntentClass {
     lower.includes("alex") ||
     lower.includes("pm") ||
     lower.includes("memory") ||
-    lower.includes("o(n log n)") ||
-    lower.includes("merge sort") ||
+    lower.includes("performance") ||
+    lower.includes("optimize") ||
     lower.includes("constraint")
   ) {
     return "CURVEBALL_ACK"
@@ -104,7 +104,7 @@ export function classifyIntent(message: string): IntentClass {
  */
 export const CAG_STATIC_REPLIES: Record<string, string[]> = {
   OFF_TOPIC: [
-    "Ha — let's stay focused on the sorting module. What's giving you trouble?",
+    "Ha — let's stay focused on the assessment. What's giving you trouble?",
     "Good question for after the session. Right now, walk me through what you're seeing in the code.",
   ],
   DONE_SIGNAL: [

@@ -94,9 +94,7 @@ function ResultsSkeleton() {
 }
 
 function fallbackResult(payload: EvaluationPayload): EvaluationResult {
-  const optimized = payload.codeSnapshots.some((code) =>
-    code.includes("merge") || code.includes("quick") || code.includes(".sort(")
-  )
+  const optimized = payload.curveballAddressed
 
   return {
     technicalAccuracy: optimized ? 7 : 3,

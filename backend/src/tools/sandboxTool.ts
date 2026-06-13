@@ -99,38 +99,57 @@ export async function executeSandbox(
 async function executeOnJudge0(code: string, language: string, stdin?: string): Promise<SandboxResult> {
   const languageId = LANGUAGE_IDS[language] || LANGUAGE_IDS.javascript
   const startTime = Date.now()
+  
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
 
-  const submitResponse = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      source_code: code,
-      language_id: languageId,
-      stdin: stdin || "",
-      cpu_time_limit: 10,
-      memory_limit: 131072, // 128 MB in KB
-      enable_network: false,
-    }),
-  })
+  try {
+    const submitResponse = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_code: code,
+        language_id: languageId,
+        stdin: stdin || "",
+        cpu_time_limit: 10,
+        memory_limit: 131072, // 128 MB in KB
+        enable_network: false,
+      }),
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timer)
 
-  if (!submitResponse.ok) {
-    throw new Error(`Judge0 returned ${submitResponse.status}`)
-  }
+    if (!submitResponse.ok) {
+      throw new Error(`Judge0 returned ${submitResponse.status}`)
+    }
 
-  const result = await submitResponse.json() as {
-    stdout?: string
-    stderr?: string
-    status?: { id: number }
-    time?: string
-  }
+    const result = await submitResponse.json() as {
+      stdout?: string
+      stderr?: string
+      status?: { id: number }
+      time?: string
+    }
 
-  const executionTime = Date.now() - startTime
+    const executionTime = Date.now() - startTime
 
-  return {
-    stdout: truncateOutput(stripAnsi(result.stdout || "")),
-    stderr: truncateOutput(stripAnsi(result.stderr || "")),
-    exitCode: result.status?.id === 3 ? 0 : 1,
-    executionTime,
+    return {
+      stdout: truncateOutput(stripAnsi(result.stdout || "")),
+      stderr: truncateOutput(stripAnsi(result.stderr || "")),
+      exitCode: result.status?.id === 3 ? 0 : 1,
+      executionTime,
+    }
+  } catch (err: any) {
+    clearTimeout(timer)
+    if (err.name === "AbortError") {
+      return {
+        stdout: "",
+        stderr: "Execution timed out (sandbox unresponsive)",
+        exitCode: 1,
+        executionTime: Date.now() - startTime,
+      }
+    }
+    throw err
   }
 }
 

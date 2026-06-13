@@ -1,4 +1,9 @@
-import pg from "pg"
+// ── Neon serverless driver ─────────────────────────────────────────
+// Uses WebSocket/HTTPS (port 443) instead of raw TCP port 5432.
+// This bypasses corporate firewalls that block outbound 5432.
+import { Pool, neonConfig } from "@neondatabase/serverless"
+import ws from "ws"
+import type { QueryResult, QueryResultRow } from "pg"
 import {
   AgentEvent,
   EvaluationResult,
@@ -6,7 +11,8 @@ import {
   TenantConfig,
 } from "../types/index.js"
 
-const { Pool } = pg
+// Wire up ws so Neon can open WebSocket connections for transactions
+neonConfig.webSocketConstructor = ws
 
 export const NEON_SCHEMA_SQL = `
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -113,6 +119,22 @@ CREATE TABLE IF NOT EXISTS uploaded_docs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- RAG pipeline: stores chunked text + vector embeddings for uploaded docs
+CREATE TABLE IF NOT EXISTS doc_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  doc_id UUID NOT NULL REFERENCES uploaded_docs(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  embedding vector(1536),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS doc_chunks_org_idx ON doc_chunks (org_id);
+CREATE INDEX IF NOT EXISTS doc_chunks_doc_idx  ON doc_chunks (doc_id);
+
 CREATE TABLE IF NOT EXISTS semantic_cache (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
@@ -152,24 +174,28 @@ CREATE TABLE IF NOT EXISTS org_users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_org_users_email ON org_users(email);
+
+-- Migrations: safely add columns that may be missing from tables created by older schema versions
+ALTER TABLE org_users ADD COLUMN IF NOT EXISTS email         TEXT         NOT NULL DEFAULT '';
+ALTER TABLE org_users ADD COLUMN IF NOT EXISTS password_hash TEXT         NOT NULL DEFAULT '';
 `
 
-let pool: pg.Pool | null = null
+let pool: Pool | null = null
 
 export function hasDatabase(): boolean {
   return Boolean(process.env.DATABASE_URL)
 }
 
-function getPool(): pg.Pool {
+function getPool(): Pool {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is not configured")
   }
 
   if (!pool) {
-    const sslDisabled = process.env.PGSSLMODE === "disable" || process.env.DATABASE_SSL === "false"
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: sslDisabled ? false : { rejectUnauthorized: false },
+      // @neondatabase/serverless uses WebSocket — SSL is handled by the WS tunnel.
+      // No raw TCP options needed here.
       max: Number(process.env.PG_POOL_MAX || 8),
     })
   }
@@ -177,15 +203,32 @@ function getPool(): pg.Pool {
   return pool
 }
 
-export async function dbQuery<T extends pg.QueryResultRow = pg.QueryResultRow>(
+export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params: unknown[] = []
-): Promise<pg.QueryResult<T>> {
+): Promise<QueryResult<T>> {
   return getPool().query<T>(text, params)
 }
 
 export async function initDatabase(): Promise<void> {
-  await getPool().query(NEON_SCHEMA_SQL)
+  const pool = getPool()
+
+  // Split on semicolons and run each statement individually so errors
+  // are surfaced per-statement rather than aborting the entire batch.
+  const statements = NEON_SCHEMA_SQL
+    .split(";")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+
+  for (const stmt of statements) {
+    try {
+      await pool.query(stmt)
+    } catch (err: any) {
+      // Log but continue — most errors here are benign schema drift
+      // (e.g. index already exists, column already exists)
+      console.warn("[DB] Schema stmt warning:", err?.message?.slice(0, 120))
+    }
+  }
 }
 
 type TenantConfigRow = {
