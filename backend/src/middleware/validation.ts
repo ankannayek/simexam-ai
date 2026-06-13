@@ -32,7 +32,7 @@ export const ChatRequestSchema = z.object({
       lastIntentClass: z.string(),
     })
     .optional(),
-  sessionId: uuidField.optional(),
+  sessionId: uuidField.nullable().optional(),
   orgSlug: safeSlug.optional(),
 })
 
@@ -41,7 +41,7 @@ export const ChatRequestSchema = z.object({
 export const ExecuteRequestSchema = z.object({
   code: safeCode,
   language: z.enum(["javascript", "typescript", "python", "java"]).optional(),
-  sessionId: uuidField.optional(),
+  sessionId: uuidField.nullable().optional(),
 })
 
 // ── Evaluate ──────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export const EvaluateRequestSchema = z.object({
   curveballFired: z.boolean(),
   curveballAddressed: z.boolean(),
   studentName: safeName,
-  sessionId: uuidField.optional(),
+  sessionId: uuidField.nullable().optional(),
   orgSlug: safeSlug.optional(),
 })
 
@@ -108,7 +108,7 @@ export const ConfigUpdateSchema = z.object({
 
 export const UploadSchema = z.object({
   orgId: uuidField,
-  sessionId: uuidField.optional(),
+  sessionId: uuidField.nullable().optional(),
 })
 
 // ── Auth ──────────────────────────────────────────────────────────
